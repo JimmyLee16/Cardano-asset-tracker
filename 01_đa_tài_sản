@@ -1,0 +1,16 @@
+Hỗ trợ nhiều tài sản
+Từ bản nâng cấp sổ cái Mary trở đi, Cardano hỗ trợ nhiều tài sản, còn được gọi là tính năng mã thông báo gốc. Tính năng này mở rộng cơ sở hạ tầng kế toán của sổ cái (ban đầu được thiết kế để xử lý các giao dịch chỉ dành cho ada) để đáp ứng các giao dịch sử dụng nhiều loại tài sản. Những tài sản này bao gồm ada và nhiều loại mã thông báo do người dùng xác định, hỗn hợp của chúng có thể được giao dịch trong một đầu ra tx duy nhất.
+
+Đa tài sản là gì?
+Nhiều nội dung là mã thông báo tùy chỉnh, do người dùng xác định. Chúng được hỗ trợ nguyên bản, có nghĩa là sổ cái xử lý việc hạch toán và theo dõi các hoạt động liên quan đến mã thông báo. Điều này mang lại những lợi ích khác biệt cho các nhà phát triển vì không cần tạo hợp đồng thông minh để đúc hoặc đốt mã thông báo tùy chỉnh, loại bỏ lớp phức tạp bổ sung và khả năng xảy ra lỗi thủ công.
+
+Một nội dung được xác định duy nhất bằng ID nội dung, là một cặp gồm cả ID chính sách và tên nội dung:
+
+PolicyID - mã định danh duy nhất được liên kết với chính sách đúc (băm của chính sách đúc).
+Tên tài sản - thuộc tính (bất biến) của tài sản được sử dụng để phân biệt các tài sản khác nhau trong cùng một chính sách. Không giống như ID chính sách, tên nội dung không đề cập đến bất kỳ mã hoặc bộ quy tắc nào. Đó là một chuỗi byte tùy ý. Trong trường hợp đơn giản nhất, đó là một từ phổ biến được mã hóa ASCII, ví dụ: 'couttscoin'. Trong tài liệu này, chúng tôi sử dụng tên nội dung "636f75747473636f696e" = hex("couttscoin") làm ví dụ.
+Các mã thông báo có cùng ID nội dung có đặc tính có thể thay thế được với nhau và không thể thay thế được với các mã thông báo có ID nội dung khác.
+
+Đọc thêm:
+
+Người giải thích mã thông báo gốc
+Bắt đầu với mã thông báo gốc. Bao gồm các ví dụ về tập lệnh để đúc, chuyển và đốt mã thông báo.
