@@ -8,7 +8,7 @@ $headers = @{
     'Content-Type' = 'application/json'
 }
 $payload = @{
-    '_stake_addresses' = @("stake1u8uu8qfa25nf50hj8s2m98j8hrwlg00a9gsa807nmvf8wyggp99cz") ## thay vào bằng địa chỉ stake của bạn
+    '_stake_addresses' = @("stake1....") ## thay vào bằng địa chỉ stake của bạn
 }
 $data1 = Invoke-RestMethod -Uri $url1 -Method Post -Headers $headers -Body ($payload | ConvertTo-Json)
 $data2 = Invoke-RestMethod -Uri $url2 -Method Post -Headers $headers -Body ($payload | ConvertTo-Json)
@@ -35,6 +35,6 @@ if ($asset_info) {
     Write-Output "$message"
 } else {
     $message1 = "Thông tin sếp cần đây nhé 😄`n`nSố dư ADA: $adabal`₳`n`nToken: không có`n`nChecked time $checked_time1`n`nHãy stake vào VIET pool nhé sếp 🙇 /pool"
-    Write-Output "$message1"
+    Write-Output "$message1" ## sếp ấn Enter đi nhé
 }
 
