@@ -5,7 +5,7 @@ var totalBalance ;
 var recipientEmail = email của bạn"
 var check = "https://adastat.net/accounts/....." // lấy đường link trong web để copy vào đây.
 var currentTime = getCurrentTime();
-var telegramBotToken =Bot token của bạn";
+var telegramBotToken = "Bot token của bạn";
 var telegramChatId ="ID telegram group"; //add group với bot 
 function soduADA() {
   // Define the recipient email
