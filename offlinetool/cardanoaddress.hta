@@ -1,0 +1,93 @@
+<html>
+<head>
+  <title>Cardano OneClick</title>
+  <HTA:APPLICATION
+    ID="CardanoOneClick"
+    APPLICATIONNAME="CardanoOneClick"
+    BORDER="thin"
+    CAPTION="yes"
+    SHOWINTASKBAR="yes"
+    SINGLEINSTANCE="yes"
+    SYSMENU="yes"
+    WINDOWSTATE="normal"
+  />
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <style>
+    body { font-family: Tahoma, Arial, sans-serif; font-size:13px; padding:12px; }
+    #status { margin-top:10px; }
+    button { padding:6px 10px; font-size:13px; }
+  </style>
+</head>
+
+<body>
+  <h3>Cardano OneClick</h3>
+  <div>Click <b>Start</b> để chạy script PowerShell và hiển thị cửa sổ console.</div>
+  <div style="margin-top:10px;">
+    <button id="btnStart" onclick="runScript()">Start</button>
+    <button id="btnCancel" onclick="window.close()">Close</button>
+  </div>
+  <div id="status"></div>
+
+<script language="VBScript">
+Option Explicit
+Dim shell, fso
+Set shell = CreateObject("WScript.Shell")
+Set fso   = CreateObject("Scripting.FileSystemObject")
+
+Sub Window_OnLoad()
+  document.getElementById("status").innerText = "Ready. cardano_oneclick.ps1 phải nằm cùng folder với file .hta."
+End Sub
+
+Sub runScript()
+  On Error Resume Next
+  document.getElementById("btnStart").disabled = True
+  document.getElementById("status").innerText = "Preparing to run PowerShell..."
+  
+  Dim rawPath, localPath, curDir, ps1Path, cmd, escapedPath
+  rawPath = document.location.pathname ' typically like /C:/path/file.hta
+  If Len(rawPath) = 0 Then rawPath = document.location.href
+  
+  ' Remove leading slash if present
+  If Left(rawPath,1) = "/" Then rawPath = Mid(rawPath,2)
+  ' Replace forward slashes with backslashes
+  rawPath = Replace(rawPath, "/", "\")
+  ' Replace common encoded chars (space)
+  rawPath = Replace(rawPath, "%20", " ")
+  ' Remove "file:\" prefix if exists
+  If LCase(Left(rawPath,6)) = "file:\" Then rawPath = Mid(rawPath,7)
+  
+  curDir = fso.GetParentFolderName(rawPath)
+  If curDir = "" Then
+    curDir = fso.GetAbsolutePathName(".")
+  End If
+
+  ps1Path = fso.BuildPath(curDir, "cardano_oneclick.ps1")
+
+  If Not fso.FileExists(ps1Path) Then
+    MsgBox "Không tìm thấy file: " & vbCrLf & ps1Path & vbCrLf & vbCrLf & "Hãy đặt cardano_oneclick.ps1 cùng folder với file .hta rồi thử lại.", vbCritical, "File not found"
+    document.getElementById("btnStart").disabled = False
+    document.getElementById("status").innerText = "Missing cardano_oneclick.ps1"
+    Exit Sub
+  End If
+
+  ' If path contains spaces, quote it
+  escapedPath = """" & ps1Path & """"
+
+  ' Build PowerShell command:
+  ' -ExecutionPolicy Bypass -> bypass policy for this invocation
+  ' -NoProfile -> don't load user's profile
+  ' -NoExit -> keep console open after script ends so user can read output
+  ' -File "<ps1>"
+  cmd = "powershell.exe -ExecutionPolicy Bypass -NoProfile -NoExit -File " & escapedPath
+
+  document.getElementById("status").innerText = "Running PowerShell... (console will appear)"
+  ' style 1 = activate and show normal window, true = wait until finished (but -NoExit will keep it open)
+  shell.Run cmd, 1, false
+
+  ' Do not wait in HTA; just re-enable button for potential rerun
+  document.getElementById("status").innerText = "PowerShell launched. Console window should be visible."
+  document.getElementById("btnStart").disabled = False
+End Sub
+</script>
+</body>
+</html>
