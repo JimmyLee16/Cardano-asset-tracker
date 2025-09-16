@@ -22,6 +22,8 @@ Cài đặt
 3. Giải nén và copy file `cardano-address.exe` vào bất kỳ thư mục nào bạn muốn).
 4. Copy script `1_click.ps1` vào cùng thư mục.
 
+5. Hoặc tải file 1_click.hta về lưu tại cùng thư mục với file ps1 và cardano-address.exe và chạy file.
+
 Cách chạy
 ---------
 1. Mở PowerShell (Run as Administrator để tránh lỗi policy).
