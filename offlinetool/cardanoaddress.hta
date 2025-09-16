@@ -35,7 +35,7 @@ Set shell = CreateObject("WScript.Shell")
 Set fso   = CreateObject("Scripting.FileSystemObject")
 
 Sub Window_OnLoad()
-  document.getElementById("status").innerText = "Ready. cardano_oneclick.ps1 phải nằm cùng folder với file .hta."
+  document.getElementById("status").innerText = "Ready. 1_click.ps1 phải nằm cùng folder với file .hta."
 End Sub
 
 Sub runScript()
@@ -61,7 +61,7 @@ Sub runScript()
     curDir = fso.GetAbsolutePathName(".")
   End If
 
-  ps1Path = fso.BuildPath(curDir, "cardano_oneclick.ps1")
+  ps1Path = fso.BuildPath(curDir, "1_click.ps1")
 
   If Not fso.FileExists(ps1Path) Then
     MsgBox "Không tìm thấy file: " & vbCrLf & ps1Path & vbCrLf & vbCrLf & "Hãy đặt cardano_oneclick.ps1 cùng folder với file .hta rồi thử lại.", vbCritical, "File not found"
@@ -91,3 +91,4 @@ End Sub
 </script>
 </body>
 </html>
+
