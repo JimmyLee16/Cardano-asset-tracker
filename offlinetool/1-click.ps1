@@ -7,7 +7,7 @@ PowerShell One-Click Cardano-Address Flow (Fixed)
 
 USAGE:
 - Place this script in the same folder as your cardano-address executable.
-- Run PowerShell and execute: .\cardano_oneclick.ps1
+- Run PowerShell and execute: .\1-click.ps1
 - The script will prompt minimal inputs (generate or use existing mnemonic, network choice, optional passphrase).
 - IMPORTANT: This script writes private keys to disk in the current folder. Handle them securely and delete when done.
 #>
