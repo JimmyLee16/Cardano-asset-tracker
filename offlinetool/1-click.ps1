@@ -8,6 +8,8 @@ PowerShell One-Click Cardano-Address Flow (Fixed)
 USAGE:
 - Place this script in the same folder as your cardano-address executable.
 - Run as admin PowerShell and execute: .\1-click.ps1 
+- In case PowerShell would not execute it should be use this command "powershell.exe -ExecutionPolicy Bypass -File .\1_click.ps1"
+- In case you don't want to excute the bypass command => just open PowerShell => move to cardano-address folder and copy&paste all code below.
 - The script will prompt minimal inputs (generate or use existing mnemonic, network choice, optional passphrase).
 - IMPORTANT: This script writes private keys to disk in the current folder. Handle them securely and delete when done.
 #>
