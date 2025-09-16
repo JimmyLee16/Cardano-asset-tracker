@@ -12,15 +12,15 @@ Nguồn chính thức:
 Yêu cầu
 -------
 - Windows PowerShell (có thể chạy trên Windows 10/11).
-- File script `cardano_oneclick.ps1`.
+- File script `1_click.ps1`.
 - Công cụ `cardano-address.exe` (đặt trong cùng thư mục với script).
 
 Cài đặt
 -------
 1. Truy cập link download ở trên.
 2. Chọn bản phù hợp với hệ điều hành (Windows).
-3. Giải nén và copy file `cardano-address.exe` vào thư mục `D:\blockchain\tooldev` (hoặc bất kỳ thư mục nào bạn muốn).
-4. Copy script `cardano_oneclick.ps1` vào cùng thư mục.
+3. Giải nén và copy file `cardano-address.exe` vào bất kỳ thư mục nào bạn muốn).
+4. Copy script `1_click.ps1` vào cùng thư mục.
 
 Cách chạy
 ---------
@@ -28,7 +28,7 @@ Cách chạy
 2. Nếu gặp lỗi "running scripts is disabled", bật quyền chạy script:
    Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 3. Chạy script:
-   .\cardano_oneclick.ps1
+   .\1_click.ps1
 
 Quy trình
 ---------
