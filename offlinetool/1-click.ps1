@@ -150,4 +150,4 @@ Write-Host " - These files contain private keys. Keep them safe and offline."
 Write-Host " - If you used a passphrase, it is not saved to disk, but it was in memory during operations."
 Write-Host " - Remove temporary or sensitive files after use."
 
-exit 0
+
