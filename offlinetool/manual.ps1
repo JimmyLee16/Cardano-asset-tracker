@@ -11,17 +11,16 @@ USAGE:
 - The script will prompt minimal inputs (generate or use existing mnemonic, network choice, optional passphrase).
 - IMPORTANT: This script writes private keys to disk in the current folder. Handle them securely and delete when done.
 #>
+param(
+    [switch]$ForceGenerate,      # if present, always generate a new mnemonic
+    [switch]$UseTestnet          # if present, use testnet; otherwise mainnet
+)
 
 # Ensure working dir = folder containing this script/exe
 try {
     $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
     if ($scriptPath) { Set-Location -Path $scriptPath }
 } catch { }
-
-param(
-    [switch]$ForceGenerate,      # if present, always generate a new mnemonic
-    [switch]$UseTestnet          # if present, use testnet; otherwise mainnet
-)
 
 function Prompt-YesNo($msg, $defaultYes=$true) {
     $choice = Read-Host "$msg [Y/N]"
