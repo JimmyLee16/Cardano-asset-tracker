@@ -8,6 +8,8 @@ Tài liệu này hướng dẫn cách tải xuống và sử dụng công cụ `
 Nguồn chính thức:
 - Download tool: https://github.com/IntersectMBO/cardano-addresses/releases
 - Tài liệu gốc: https://github.com/IntersectMBO/cardano-addresses?tab=readme-ov-file
+- script 1_click là script tạo địa chỉ tự động với dẫn xuất stake & payment = 0 (giống như khi tạo 1 ví mới từ đầu)
+- script manual là script tạo địa chỉ tùy biến dẫn xuất theo ý của người dùng ( người dùng cần phải có hiểu biết cơ bản về kiến thức này)
 
 Yêu cầu
 -------
