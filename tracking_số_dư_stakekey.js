@@ -1,3 +1,4 @@
+//script viết và triển khai qua google app script
 
 var spreadsheetId = "google sheet id của bạn";
 var lastUpdateTimestamp = 0;
