@@ -70,8 +70,7 @@ if ($ForceGenerate -or -not (Test-Path $phraseFile)) {
     switch ($choice) {
         "manual" {
             $mnemonic = Read-Host "Nhập mnemonic (cách nhau bằng dấu cách)"
-            Set-Content -Path $phraseFile -Value $mnemonic -Encoding UTF8
-            Write-Host "Mnemonic đã được lưu vào $phraseFile"
+            Write-Host "Mnemonic đã được gán vào biến \$mnemonic (không lưu file)."
         }
         "auto" {
             $size = Read-Host "Nhập số lượng word muốn tạo (9,12,15,21,24)"
@@ -117,7 +116,13 @@ try {
 
 # Create root.xsk (KEEP chain code for derivation)
 Write-Host "`nCreating root.xsk (extended, WITH chain code for derivation)..."
-$phraseContent = Get-Content .\phrase.prv -Raw
+
+if ($null -ne $mnemonic -and $mnemonic.Trim().Length -gt 0) {
+    $phraseContent = $mnemonic.Trim()
+} else {
+    $phraseContent = Get-Content .\phrase.prv -Raw
+}
+
 $inputForRoot = $phraseContent + "`n" + $passPlain
 $inputForRoot | & $cardanoExe key from-recovery-phrase Shelley > .\root.xsk
 if ($LASTEXITCODE -ne 0) {
@@ -125,6 +130,7 @@ if ($LASTEXITCODE -ne 0) {
     exit 3
 }
 Write-Host "root.xsk created."
+
 
 # ===== Derive payment key (interactive index) =====
 $null = Read-Host "`nNhấn Enter để bắt đầu derive Payment key"
