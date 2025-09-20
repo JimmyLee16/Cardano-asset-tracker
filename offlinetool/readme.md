@@ -35,6 +35,9 @@ Usage
 3. Run script
    ```powershell
    .\1_click.ps1
+   or
+   ```powershell
+   .\manual.ps1
 
 ***Process***
 - Generate a new mnemonic (15 words) or reuse an existing one from phrase.prv.
