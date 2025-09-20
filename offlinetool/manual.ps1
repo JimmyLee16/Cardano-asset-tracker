@@ -55,54 +55,53 @@ Write-Host "Selected network: $networkTag`n"
 # Mnemonic: generate or use existing phrase.prv
 $phraseFile = ".\phrase.prv"
 
-if (-not $ForceGenerate -and (Test-Path $phraseFile)) {
-    $useExisting = Prompt-YesNo "phrase.prv exists. Use existing file? (No = generate new)" $true
-    if (-not $useExisting) { $ForceGenerate = $true }
+function Save-UTF8NoBOM {
+    param($Path, $Text)
+    $enc = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Path, $Text, $enc)
 }
 
 if ($ForceGenerate -or -not (Test-Path $phraseFile)) {
-    Write-Host "Chọn cách khởi tạo mnemonic:"
-    Write-Host "  1) manual - nhập mnemonic thủ công"
-    Write-Host "  2) auto   - generate mnemonic mới"
-    Write-Host "  3) file   - dùng file có sẵn khác"
-    $choice = Read-Host "Nhập lựa chọn (manual/auto/file)"
+    Write-Host "Chọn cách khởi tạo mnemonic: manual / auto / file"
+    $choice = Read-Host "Nhập lựa chọn"
 
     switch ($choice) {
         "manual" {
             $mnemonic = Read-Host "Nhập mnemonic (cách nhau bằng dấu cách)"
-            [System.IO.File]::WriteAllText($phraseFile, $mnemonic, [System.Text.Encoding]::UTF8)
-            Write-Host "Mnemonic đã được lưu vào $phraseFile"
+            $mnemonic = $mnemonic.Trim()
+            # sanitize: loại bỏ ký tự không in được
+            $mnemonic = $mnemonic -replace '[^\x20-\x7E\r\n]', ''
+            Save-UTF8NoBOM -Path $phraseFile -Text $mnemonic
+            Write-Host "Saved (UTF-8 no BOM) -> $phraseFile"
         }
         "auto" {
             $size = Read-Host "Nhập số lượng word muốn tạo (9,12,15,21,24)"
-            Write-Host "Generating mnemonic và lưu vào $phraseFile..."
-            & $cardanoExe recovery-phrase generate --size $size > $phraseFile
+            Write-Host "Generating mnemonic..."
+            $raw = & $cardanoExe recovery-phrase generate --size $size
             if ($LASTEXITCODE -ne 0) {
                 Write-Error "Failed to generate mnemonic. Aborting."
                 exit 2
             }
-            Write-Host "Mnemonic saved to $phraseFile"
+            $raw = $raw.Trim() -replace '[^\x20-\x7E\r\n]', ''
+            Save-UTF8NoBOM -Path $phraseFile -Text $raw
+            Write-Host "Mnemonic saved (UTF-8 no BOM) -> $phraseFile"
         }
         "file" {
             $srcFile = Read-Host "Nhập đường dẫn file mnemonic có sẵn"
-            if (Test-Path $srcFile) {
-                Copy-Item $srcFile $phraseFile -Force
-                Write-Host "Copied mnemonic từ $srcFile -> $phraseFile"
-            } else {
-                Write-Error "File không tồn tại: $srcFile"
-                exit 3
-            }
+            if (-not (Test-Path $srcFile)) { Write-Error "File không tồn tại"; exit 3 }
+            $text = Get-Content -Path $srcFile -Raw
+            $text = $text.Trim() -replace '[^\x20-\x7E\r\n]', ''
+            Save-UTF8NoBOM -Path $phraseFile -Text $text
+            Write-Host "Copied and re-encoded -> $phraseFile"
         }
         default {
             Write-Error "Lựa chọn không hợp lệ. Aborting."
             exit 1
         }
     }
-}
-else {
+} else {
     Write-Host "Using existing $phraseFile"
 }
-
 
 # Prompt for optional passphrase (can be empty)
 Write-Host "`nIf you want an empty passphrase press Enter. Otherwise type a passphrase (it will not be saved to disk)."
