@@ -33,8 +33,8 @@ Cách chạy
    ```powershell
    powershell Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
-4. Chạy script:
-   .\1_click.ps1
+3. Chạy script:
+   ```powershell .\1_click.ps1
 
 Quy trình
 ---------
