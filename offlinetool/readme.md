@@ -106,6 +106,7 @@ Cách chạy
 hoặc
    ```powershell
    .\manual.ps1
+```
 
 Quy trình
 ---------
