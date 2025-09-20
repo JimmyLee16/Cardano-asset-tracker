@@ -102,6 +102,10 @@ Cách chạy
 3. Chạy script:
    ```powershell
    .\1_click.ps1
+      ```
+hoặc
+   ```powershell
+   .\manual.ps1
 
 Quy trình
 ---------
