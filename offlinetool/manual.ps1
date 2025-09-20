@@ -60,7 +60,8 @@ if (-not $ForceGenerate -and (Test-Path $phraseFile)) {
 }
 if ($ForceGenerate -or -not (Test-Path $phraseFile)) {
     Write-Host "Generating 15-word mnemonic and saving to phrase.prv..."
-    & $cardanoExe recovery-phrase generate --size 15 > $phraseFile
+    $size = Read-Host "nhập số lượng word mà bạn muốn tạo 9,12,15,21,24"
+    & $cardanoExe recovery-phrase generate --size $size > $phraseFile
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Failed to generate mnemonic. Aborting."
         exit 2
@@ -95,7 +96,7 @@ Write-Host "root.xsk created."
 
 # ===== Derive payment key (interactive index) =====
 $null = Read-Host "`nNhấn Enter để bắt đầu derive Payment key"
-$payIndex = Read-Host "Nhập chỉ số index cho payment key (vd: 0, 1, 2, ...)"
+$payIndex = Read-Host "Nhập chỉ số index cho payment key (bạn có thể nhập số từ 0 -> 2^31-1)"
 $payPath = "1852H/1815H/0H/0/$payIndex"
 Write-Host "Deriving payment private key -> addr.xsk (path: $payPath)"
 Get-Content .\root.xsk -Raw | & $cardanoExe key child $payPath > .\addr.xsk
@@ -112,7 +113,7 @@ Write-Host "payment.addr created."
 
 # ===== Derive stake key (interactive index) =====
 $null = Read-Host "`nNhấn Enter để bắt đầu derive Stake key"
-$stakeIndex = Read-Host "Nhập chỉ số index cho stake key (vd: 0, 1, 2, ...)"
+$stakeIndex = Read-Host "Nhập chỉ số index cho stake key (bạn có thể nhập số từ 0 -> 2^31-1)"
 $stakePath = "1852H/1815H/0H/2/$stakeIndex"
 Write-Host "Deriving stake private key -> stake.xsk (path: $stakePath)"
 Get-Content .\root.xsk -Raw | & $cardanoExe key child $stakePath > .\stake.xsk
