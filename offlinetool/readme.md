@@ -36,7 +36,7 @@ Usage
    ```powershell
    .\1_click.ps1
 
-##**Process**
+***Process***
 - Generate a new mnemonic (15 words) or reuse an existing one from phrase.prv.
 - Derive root.xsk (root private key).
 - Derive payment key (addr.xsk + addr.xvk).
