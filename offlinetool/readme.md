@@ -31,13 +31,12 @@ Usage
 1. Open PowerShell (Run as Administrator to avoid policy errors).  
 2. If you get the error "running scripts is disabled", enable script execution:  
    ```powershell
-   powershell Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-   
-3.Run script
+   powershell Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass 
+3. Run script
    ```powershell
-   .\1_click.ps1```
+   .\1_click.ps1
 
-Process
+**Process**
 - Generate a new mnemonic (15 words) or reuse an existing one from phrase.prv.
 - Derive root.xsk (root private key).
 - Derive payment key (addr.xsk + addr.xvk).
