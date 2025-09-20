@@ -34,7 +34,8 @@ Cách chạy
    powershell Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 3. Chạy script:
-   ```powershell .\1_click.ps1
+   ```powershell
+   .\1_click.ps1
 
 Quy trình
 ---------
