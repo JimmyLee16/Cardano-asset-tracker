@@ -9,7 +9,7 @@ This document explains how to download and use the `cardano-address` tool to gen
 Official sources:
 - Download tool: https://github.com/IntersectMBO/cardano-addresses/releases  
 - Original docs: https://github.com/IntersectMBO/cardano-addresses?tab=readme-ov-file  
-- `1_click` script: creates an address automatically with stake & payment indexes set to 0 (same as creating a brand-new wallet).  
+- `1_click` script: creates an address automatically with stake & payment indexes set to 0 (same as creating a brand-new wallet via wallet app).  
 - `manual` script: allows users to generate addresses with custom derivation indexes (requires some understanding of derivation paths or Franken Address).  
 
 Requirements
@@ -73,7 +73,7 @@ Tài liệu này hướng dẫn cách tải xuống và sử dụng công cụ `
 Nguồn chính thức:
 - Download tool: https://github.com/IntersectMBO/cardano-addresses/releases
 - Tài liệu gốc: https://github.com/IntersectMBO/cardano-addresses?tab=readme-ov-file
-- script 1_click là script tạo địa chỉ tự động với dẫn xuất stake & payment = 0 (giống như khi tạo 1 ví mới từ đầu)
+- script 1_click là script tạo địa chỉ tự động với dẫn xuất stake & payment = 0 (giống như khi tạo 1 ví mới từ đầu thông qua phần mềm ví)
 - script manual là script tạo địa chỉ tùy biến dẫn xuất theo ý của người dùng ( người dùng cần phải có hiểu biết cơ bản về dẫn xuất địa chỉ hoặc Franken Address)
 
 Yêu cầu
