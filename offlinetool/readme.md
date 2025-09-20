@@ -17,14 +17,12 @@ Requirements
 - Script file `1_click.ps1`.  
 - The tool `cardano-address.exe` (placed in the same folder as the script).  
 
-Installation
+Preparation
 ------------
 1. Go to the download link above.  
 2. Choose the version for your OS (Windows).  
 3. Extract and copy `cardano-address.exe` to any folder you want.  
 4. Copy the script `1_click.ps1` into the same folder.  
-
-5. Alternatively, download `1_click.hta`, place it in the same folder with `1_click.ps1` and `cardano-address.exe`, then run it.  
 
 Usage
 -----
@@ -83,14 +81,12 @@ Yêu cầu
 - File script `1_click.ps1`.
 - Công cụ `cardano-address.exe` (đặt trong cùng thư mục với script).
 
-Cài đặt
+Chuẩn bị
 -------
 1. Truy cập link download ở trên.
 2. Chọn bản phù hợp với hệ điều hành (Windows).
 3. Giải nén và copy file `cardano-address.exe` vào bất kỳ thư mục nào bạn muốn).
 4. Copy script `1_click.ps1` vào cùng thư mục.
-
-5. Hoặc tải file 1_click.hta về lưu tại cùng thư mục với file ps1 và cardano-address.exe và chạy file.
 
 Cách chạy
 ---------
