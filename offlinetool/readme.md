@@ -30,8 +30,8 @@ Cách chạy
 ---------
 1. Mở PowerShell (Run as Administrator để tránh lỗi policy).
 2. Nếu gặp lỗi "running scripts is disabled", bật quyền chạy script:
-  `\`\`\powershell
-powershell Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass `\`\`\
+   \`\`\`powershell
+powershell Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass \`\`\`
 
 3. Chạy script:
    .\1_click.ps1
