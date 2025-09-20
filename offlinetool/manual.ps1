@@ -70,7 +70,7 @@ if ($ForceGenerate -or -not (Test-Path $phraseFile)) {
     switch ($choice) {
         "manual" {
             $mnemonic = Read-Host "Nhập mnemonic (cách nhau bằng dấu cách)"
-            Set-Content -Path $phraseFile -Value $mnemonic -Encoding UTF8
+            [System.IO.File]::WriteAllText($phraseFile, $mnemonic, [System.Text.Encoding]::UTF8)
             Write-Host "Mnemonic đã được lưu vào $phraseFile"
         }
         "auto" {
