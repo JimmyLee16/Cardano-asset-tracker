@@ -35,7 +35,8 @@ Usage
 3. Run script
    ```powershell
    .\1_click.ps1
-      or
+
+   or
    ```powershell
    .\manual.ps1
 
