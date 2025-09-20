@@ -34,7 +34,8 @@ Usage
    powershell Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass 
 3. Run script
    ```powershell
-   .\1_click.ps1```
+   .\1_click.ps1
+   ```
 
    or
    ```powershell
