@@ -1,8 +1,8 @@
 <#
-PowerShell One-Click Cardano-Address Flow (Fixed)
-- Generates or uses an existing mnemonic (phrase.prv)
-- Derives root, payment and stake keys (uses chain code for derivation then exports public keys without chain code)
-- Builds payment address (payment.addr), stake address (stake.addr) and delegated/base address (addr.delegated)
+PowerShell Manual Cardano-Address Flow 
+- Generates or uses an existing mnemonic (phrase.prv) or manually inputs
+- Derives root, payment, and stake keys (uses chain code for derivation, then exports public keys without chain code)
+- Builds payment address (payment.addr), stake address (stake.addr), and delegated/base address (addr.delegated) based on the address index manually picked by the user
 - Uses the cardano-address executable in the same folder (.\cardano-address or .\cardano-address.exe)
 
 USAGE:
@@ -54,7 +54,6 @@ Write-Host "Selected network: $networkTag`n"
 
 # Mnemonic: generate or use existing phrase.prv
 $phraseFile = ".\phrase.prv"
-$mnemonic   = $null   # giữ mnemonic manual trong RAM
 
 if (-not $ForceGenerate -and (Test-Path $phraseFile)) {
     $useExisting = Prompt-YesNo "phrase.prv exists. Use existing file? (No = generate new)" $true
@@ -62,36 +61,39 @@ if (-not $ForceGenerate -and (Test-Path $phraseFile)) {
 }
 
 if ($ForceGenerate -or -not (Test-Path $phraseFile)) {
-    Write-Host "Chọn cách khởi tạo mnemonic:"
-    Write-Host "  manual - nhập mnemonic thủ công"
-    Write-Host "  auto   - generate mnemonic mới"
-    Write-Host "  file   - dùng file có sẵn khác"
-    $choice = Read-Host "Nhập lựa chọn (manual/auto/file)"
+    Write-Host "Choose how to set mnemonic:"
+    Write-Host "  1) manual - enter mnemonic manually"
+    Write-Host "  2) auto   - generate new mnemonic"
+    Write-Host "  3) file   - use another existing file"
+    $choice = Read-Host "Enter choice (manual/auto/file)"
 
     switch ($choice) {
         "manual" {
-            $mnemonic = Read-Host "Nhập mnemonic (cách nhau bằng dấu cách)"
-            Write-Host "Mnemonic đã được nhập (chỉ giữ trong biến, không lưu file)."
+            $mnemonic = Read-Host "Enter mnemonic words separated by space"
+            Write-Host "Mnemonic stored in variable `$mnemonic (not saved to file)."
         }
         "auto" {
-            $size = Read-Host "Nhập số lượng word muốn tạo (9,12,15,21,24)"
-            Write-Host "Generating mnemonic và lưu vào $phraseFile..."
-            & $cardanoExe recovery-phrase generate --size $size | Out-File -FilePath $phraseFile -Encoding utf8 -NoNewline
-            if ($LASTEXITCODE -ne 0) { Write-Error "Failed to generate mnemonic. Aborting."; exit 2 }
+            $size = Read-Host "Enter number of words (9,12,15,21,24)"
+            Write-Host "Generating mnemonic and saving to $phraseFile..."
+            & $cardanoExe recovery-phrase generate --size $size > $phraseFile
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error "Failed to generate mnemonic. Aborting."
+                exit 2
+            }
             Write-Host "Mnemonic saved to $phraseFile"
         }
         "file" {
-            $srcFile = Read-Host "Nhập đường dẫn file mnemonic có sẵn"
+            $srcFile = Read-Host "Enter path to existing mnemonic file"
             if (Test-Path $srcFile) {
-                Get-Content $srcFile -Raw | Out-File -FilePath $phraseFile -Encoding utf8 -NoNewline
-                Write-Host "Copied mnemonic từ $srcFile -> $phraseFile"
+                Copy-Item $srcFile $phraseFile -Force
+                Write-Host "Copied mnemonic from $srcFile -> $phraseFile"
             } else {
-                Write-Error "File không tồn tại: $srcFile"
+                Write-Error "File not found: $srcFile"
                 exit 3
             }
         }
         default {
-            Write-Error "Lựa chọn không hợp lệ. Aborting."
+            Write-Error "Invalid choice. Aborting."
             exit 1
         }
     }
@@ -103,23 +105,36 @@ else {
 # Prompt for optional passphrase (can be empty)
 Write-Host "`nIf you want an empty passphrase press Enter. Otherwise type a passphrase (it will not be saved to disk)."
 $securePass = Read-Host "Enter passphrase (hidden)" -AsSecureString
+# Convert SecureString to plain text in memory
 $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePass)
-try { $passPlain = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($BSTR) }
-finally { [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR) }
+try {
+    $passPlain = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($BSTR)
+} finally {
+    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+}
+# Note: $passPlain contains passphrase (possibly empty). Avoid writing it to disk.
 
-# Create root.xsk
+# Create root.xsk (KEEP chain code for derivation)
 Write-Host "`nCreating root.xsk (extended, WITH chain code for derivation)..."
-if ($mnemonic) { $phraseContent = $mnemonic.Trim() }
-else { $phraseContent = Get-Content $phraseFile -Raw }
+
+if ($null -ne $mnemonic -and $mnemonic.Trim().Length -gt 0) {
+    $phraseContent = $mnemonic.Trim()
+} else {
+    $phraseContent = Get-Content .\phrase.prv -Raw
+}
 
 $inputForRoot = $phraseContent + "`n" + $passPlain
 $inputForRoot | & $cardanoExe key from-recovery-phrase Shelley > .\root.xsk
-if ($LASTEXITCODE -ne 0) { Write-Error "Failed to create root.xsk. Aborting."; exit 3 }
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Failed to create root.xsk. Aborting."
+    exit 3
+}
 Write-Host "root.xsk created."
 
-# ===== Derive payment key =====
-$null = Read-Host "`nNhấn Enter để bắt đầu derive Payment key"
-$payIndex = Read-Host "Nhập chỉ số index cho payment key (0 -> 2^31-1)"
+
+# ===== Derive payment key (interactive index) =====
+$null = Read-Host "`nPress Enter to derive Payment key"
+$payIndex = Read-Host "Enter index number for payment key (0 -> 2^31-1)"
 $payPath = "1852H/1815H/0H/0/$payIndex"
 Write-Host "Deriving payment private key -> addr.xsk (path: $payPath)"
 Get-Content .\root.xsk -Raw | & $cardanoExe key child $payPath > .\addr.xsk
@@ -127,35 +142,58 @@ if ($LASTEXITCODE -ne 0) { Write-Error "Failed to derive addr.xsk"; exit 4 }
 Write-Host "Exporting payment public key (non-extended) -> addr.xvk"
 Get-Content .\addr.xsk -Raw | & $cardanoExe key public --without-chain-code > .\addr.xvk
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to export addr.xvk"; exit 5 }
-Write-Host "Building payment.addr"
-Get-Content .\addr.xvk -Raw | & $cardanoExe address payment --network-tag $networkTag > .\payment.addr
 
-# ===== Derive stake key =====
-$null = Read-Host "`nNhấn Enter để bắt đầu derive Stake key"
-$stakeIndex = Read-Host "Nhập chỉ số index cho stake key (0 -> 2^31-1)"
+# Build payment.addr from addr.xvk
+Write-Host "Building payment.addr from addr.xvk -> payment.addr"
+Get-Content .\addr.xvk -Raw | & $cardanoExe address payment --network-tag $networkTag > .\payment.addr
+if ($LASTEXITCODE -ne 0) { Write-Error "Failed to build payment.addr"; exit 6 }
+Write-Host "payment.addr created."
+
+# ===== Derive stake key (interactive index) =====
+$null = Read-Host "`nPress Enter to derive Stake key"
+$stakeIndex = Read-Host "Enter index number for stake key (0 -> 2^31-1)"
 $stakePath = "1852H/1815H/0H/2/$stakeIndex"
 Write-Host "Deriving stake private key -> stake.xsk (path: $stakePath)"
 Get-Content .\root.xsk -Raw | & $cardanoExe key child $stakePath > .\stake.xsk
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to derive stake.xsk"; exit 7 }
-Write-Host "Exporting stake public key -> stake.xvk"
+Write-Host "Exporting stake public key (non-extended) -> stake.xvk"
 Get-Content .\stake.xsk -Raw | & $cardanoExe key public --without-chain-code > .\stake.xvk
-Write-Host "Building stake.addr"
-Get-Content .\stake.xvk -Raw | & $cardanoExe address stake --network-tag $networkTag > .\stake.addr
+if ($LASTEXITCODE -ne 0) { Write-Error "Failed to export stake.xvk"; exit 8 }
 
-# ===== Delegated address =====
+# (Optional) Build stake.addr for registration / viewing
+Write-Host "Building stake.addr -> stake.addr"
+Get-Content .\stake.xvk -Raw | & $cardanoExe address stake --network-tag $networkTag > .\stake.addr
+if ($LASTEXITCODE -ne 0) { Write-Warning "Failed to build stake.addr (non-fatal)"; } else { Write-Host "stake.addr created." }
+
+# Build delegated/base address by piping payment.addr and passing stake.xvk as credential
 Write-Host "Building delegated/base address -> addr.delegated"
 $stakePub = (Get-Content .\stake.xvk -Raw).Trim()
-Get-Content .\payment.addr -Raw | & $cardanoExe address delegation $stakePub > .\addr.delegated
+if (-not $stakePub) { Write-Error "stake.xvk is empty; cannot build delegated address"; exit 9 }
+Get-Content .\payment.addr -Raw | & $cardanoExe address delegation $stakePub  > .\addr.delegated
+if ($LASTEXITCODE -ne 0) { Write-Error "Failed to build addr.delegated"; exit 10 }
+Write-Host "addr.delegated created."
 
+# Final info and cleanup
 Write-Host "`n=== DONE ===" -ForegroundColor Green
-Write-Host "Created:"
-Write-Host "  phrase.prv      (mnemonic, nếu dùng auto/file)"
-Write-Host "  root.xsk        (root private key - extended)"
-Write-Host "  addr.xsk / .xvk (payment key pair)"
+Write-Host "Files created in current folder:"
+Write-Host "  phrase.prv      (mnemonic)"
+Write-Host "  root.xsk        (root private key - extended for derivation)"
+Write-Host "  addr.xsk        (payment private key - child)"
+Write-Host "  addr.xvk        (payment public key - non-extended)"
 Write-Host "  payment.addr    (payment address)"
-Write-Host "  stake.xsk / .xvk (stake key pair)"
+Write-Host "  stake.xsk       (stake private key - child)"
+Write-Host "  stake.xvk       (stake public key - non-extended)"
 Write-Host "  stake.addr      (stake address)"
-Write-Host "  addr.delegated  (base address with staking)"
+Write-Host "  addr.delegated  (delegated/base address with staking)"
 
-# Cleanup
-if ($passPlain) { $passPlain = $null; [GC]::Collect(); [GC]::WaitForPendingFinalizers() }
+# Zero out passphrase variable for safety
+if ($passPlain) {
+    $passPlain = $null
+    [GC]::Collect()
+    [GC]::WaitForPendingFinalizers()
+}
+
+Write-Host "`nSecurity notes:"
+Write-Host " - These files contain private keys. Keep them safe and offline."
+Write-Host " - If you used a passphrase, it is not saved to disk, but it was in memory during operations."
+Write-Host " - Remove temporary or sensitive files after use."
