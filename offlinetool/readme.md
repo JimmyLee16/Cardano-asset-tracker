@@ -32,25 +32,19 @@ Usage
 2. If you get the error "running scripts is disabled", enable script execution:  
    ```powershell
    powershell Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+   
 3.Run script
    ```powershell
    .\1_click.ps1
 
 Process
-
-Generate a new mnemonic (15 words) or reuse an existing one from phrase.prv.
-
-Derive root.xsk (root private key).
-
-Derive payment key (addr.xsk + addr.xvk).
-
-Derive stake key (stake.xsk + stake.xvk).
-
-Generate payment-only address (payment.addr).
-
-Generate stake address (stake.addr).
-
-Generate delegated/base address (addr.delegated) combining payment + stake.
+- Generate a new mnemonic (15 words) or reuse an existing one from phrase.prv.
+- Derive root.xsk (root private key).
+- Derive payment key (addr.xsk + addr.xvk).
+- Derive stake key (stake.xsk + stake.xvk).
+- Generate payment-only address (payment.addr).
+- Generate stake address (stake.addr).
+- Generate delegated/base address (addr.delegated) combining payment + stake.
 
 Security Notes
 
