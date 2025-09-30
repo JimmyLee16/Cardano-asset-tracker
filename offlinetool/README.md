@@ -30,7 +30,7 @@ Usage
 1. Open PowerShell (Run as Administrator to avoid policy errors).  
 2. If you get the error "running scripts is disabled", enable script execution:  
    ```powershell
-   powershell Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass 
+   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass 
 3. Run script
    ```powershell
    .\1_click.ps1
