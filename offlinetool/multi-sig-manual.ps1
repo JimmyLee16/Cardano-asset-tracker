@@ -1,336 +1,804 @@
 <#
-manual_multisig.ps1
-Offline manual multisig builder using cardano-address (shared keys, 1854H)
-- Fully interactive: user chooses names, how many mnemonics to create, indices, active_from/active_until, output filenames.
-- Requires: cardano-address (cardano-address.exe) in same folder or in PATH.
-- Network default: testnet (you can pass -UseMainnet to use mainnet)
-- WARNING: This script writes private-key files to disk. Keep them secure/offline.
-#>
+PowerShell Manual Cardano Multisig Address Flow with Interactive Navigation
+Bilingual Support: English & Vietnamese
+- Creates multisig wallets using shared derivation path (1854H)
+- Supports M-of-N signatures with optional time constraints
+- Interactive navigation: confirm, redo, go back, or jump to specific steps
+- Generates or uses existing mnemonics for multiple participants
 
+USAGE:
+- Place this script in the same folder as your cardano-address executable.
+- Run PowerShell and execute: .\multisig.ps1
+- IMPORTANT: This script writes private keys to disk. Handle them securely and delete when done.
+#>
 param(
     [switch]$UseMainnet
 )
 
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
+# Ensure working dir = folder containing this script/exe
+try {
+    $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
+    if ($scriptPath) { Set-Location -Path $scriptPath }
+} catch { }
 
-function Write-Info($msg){ Write-Host $msg -ForegroundColor Cyan }
-function Write-Warn($msg){ Write-Host $msg -ForegroundColor Yellow }
-function Write-Err($msg){ Write-Host $msg -ForegroundColor Red }
-function Pause-Continue(){ Read-Host "`nNhấn Enter để tiếp tục..." }
+# Language selection
+Write-Host "╔════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+Write-Host "║      Cardano Multisig Address Generator - Language Selection      ║" -ForegroundColor Cyan
+Write-Host "║      Tạo Địa Chỉ Multisig Cardano - Chọn Ngôn Ngữ                 ║" -ForegroundColor Cyan
+Write-Host "╚════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Select your language / Chọn ngôn ngữ:"
+Write-Host "  [1] English"
+Write-Host "  [2] Tiếng Việt"
+Write-Host ""
+$langChoice = Read-Host "Enter choice / Nhập lựa chọn (1 or 2)"
 
-# locate cardano-address executable
-$exeCandidates = @(".\cardano-address.exe", ".\cardano-address.exe", ".\cardano-address", "cardano-address")
-$cardanoExe = $null
-foreach ($c in $exeCandidates) {
-    if (Get-Command $c -ErrorAction SilentlyContinue) { $cardanoExe = (Get-Command $c).Path; break }
-    if (Test-Path $c) { $cardanoExe = (Resolve-Path $c).Path; break }
+$script:lang = if ($langChoice -eq "2") { "vi" } else { "en" }
+
+# Language strings
+$script:strings = @{
+    en = @{
+        # Common
+        yes = "Y"
+        no = "N"
+        enter = "Enter"
+        continue = "Continue"
+        pressEnter = "Press Enter to continue"
+        
+        # Menu
+        menuContinue = "[C] Continue to next step (default)"
+        menuRedo = "[R] Redo this step"
+        menuBack = "[B] Go back to previous step"
+        menuGoto = "[G] Go to specific step (1-5)"
+        menuQuit = "[Q] Quit"
+        menuPrompt = "Enter choice"
+        stepCompleted = "Step {0}: {1} - Completed"
+        whatNext = "What would you like to do next?"
+        
+        # Step 0: Initialize
+        welcomeTitle = "Cardano Multisig Address Generator - Interactive Flow"
+        usageGuide = "USAGE GUIDE:"
+        usageDesc = "  • This script will guide you through 5 steps to create multisig addresses"
+        usageNav = "  • After each step, you can:"
+        usageNav1 = "    - Continue to next step"
+        usageNav2 = "    - Redo current step"
+        usageNav3 = "    - Go back to previous step"
+        usageNav4 = "    - Jump to specific step"
+        stepsTitle = "STEPS:"
+        step1Desc = "  1. Select network (mainnet/testnet)"
+        step2Desc = "  2. Setup participants (mnemonics for each participant)"
+        step3Desc = "  3. Derive keys for all participants (1854H shared path)"
+        step4Desc = "  4. Configure multisig policy (M-of-N, time constraints)"
+        step5Desc = "  5. Generate multisig address"
+        securityTitle = "⚠️  SECURITY IMPORTANT:"
+        security1 = "  • This script creates files containing private keys"
+        security2 = "  • Keep these files safe and DO NOT share"
+        security3 = "  • Delete temporary files after use"
+        security4 = "  • Each participant should keep their own keys secure"
+        checkingExe = "Checking for cardano-address executable..."
+        exeNotFound = "❌ cardano-address executable not found in current directory!"
+        exeDownload = "   Please download cardano-address and place it in the same folder as this script."
+        exeDownloadUrl = "   Download at: https://github.com/input-output-hk/cardano-addresses/releases"
+        exeFound = "✓ Found: {0}"
+        pressStart = "Press Enter to start"
+        
+        # Step 1: Network
+        step1Title = "STEP 1: Select Network"
+        selectNetwork = "Selected network: {0}"
+        useTestnet = "Use testnet? (default No = mainnet)"
+        
+        # Step 2: Participants
+        step2Title = "STEP 2: Setup Participants"
+        enterParticipantCount = "Enter total number of participants (M)"
+        participantSetup = "Setting up participant #{0}: {1}"
+        enterParticipantName = "Enter name for participant #{0} (e.g., alice, bob, charlie)"
+        chooseMnemonicMethod = "Choose mnemonic method for {0}:"
+        mnemonicGenerate = "  [1] Generate new mnemonic (default)"
+        mnemonicManual = "  [2] Enter mnemonic manually"
+        mnemonicFile = "  [3] Use existing file"
+        mnemonicChoice = "Enter choice (1/2/3)"
+        enterWordCount = "Enter number of words (9, 12, 15, 18, 21 24) [default: 15]"
+        generatingMnemonic = "Generating mnemonic for {0}..."
+        mnemonicSaved = "Mnemonic saved to: {0}"
+        enterMnemonic = "Enter mnemonic words (space separated) for {0}"
+        enterFilePath = "Enter path to mnemonic file for {0}"
+        fileNotFound = "File not found: {0}"
+        participantsCreated = "All {0} participants created successfully"
+        
+        # Step 3: Derive Keys
+        step3Title = "STEP 3: Derive Keys for All Participants"
+        enterPaymentIndex = "Enter payment key index (0-2147483647) [default: 0]"
+        derivingKeys = "Deriving keys for participant: {0}"
+        derivingRoot = "  → Deriving root key..."
+        derivingPayment = "  → Deriving payment key (1854H/1815H/0H/0/{0})..."
+        exportingPublic = "  → Exporting public key..."
+        calculatingHash = "  → Calculating key hash..."
+        generatingPaymentAddr = "  → Generating individual payment address..."
+        keysDerived = "Keys derived for: {0}"
+        keyHash = "    Key hash: {0}"
+        paymentAddr = "    Payment address: {0}"
+        allKeysDerived = "All participant keys derived successfully"
+        
+        # Step 4: Configure Policy
+        step4Title = "STEP 4: Configure Multisig Policy"
+        enterThreshold = "Enter signature threshold N (minimum signatures required, 1-{0})"
+        thresholdSet = "Threshold set: {0} of {1} signatures required"
+        useTimeConstraints = "Add time constraints? (active_from/active_until)"
+        enterActiveFrom = "Enter active_from slot (Enter to skip)"
+        enterActiveUntil = "Enter active_until slot (Enter to skip)"
+        activeFromSet = "Active from slot: {0}"
+        activeUntilSet = "Active until slot: {0}"
+        noTimeConstraints = "No time constraints set"
+        policyExpression = "Multisig policy expression:"
+        policyConfigured = "Multisig policy configured successfully"
+        
+        # Step 5: Generate Address
+        step5Title = "STEP 5: Generate Multisig Address"
+        generatingPolicy = "Generating policy ID..."
+        policyId = "Policy ID: {0}"
+        generatingAddress = "Generating multisig payment address..."
+        multisigAddress = "Multisig Address: {0}"
+        savingFiles = "Saving policy and address files..."
+        addressGenerated = "Multisig address generated successfully"
+        
+        # Final
+        completedTitle = "COMPLETED - MULTISIG ADDRESS CREATION"
+        filesCreated = "Files created in keys/ folder:"
+        participantFiles = "Participant {0} ({1}):"
+        file1 = "  📄 {0}.phrase     - Mnemonic phrase"
+        file2 = "  🔐 {0}.root.xsk   - Root private key"
+        file3 = "  🔐 {0}.pay.{1}.xsk - Payment private key"
+        file4 = "  🔓 {0}.pay.{1}.xvk - Payment public key"
+        file5 = "  🔑 {0}.hash       - Key hash"
+        file6 = "  💳 {0}.payment.addr - Individual payment address"
+        policyFiles = "Multisig Policy Files:"
+        file7 = "  📜 policy.txt         - Policy expression"
+        file8 = "  🆔 policy_id.txt      - Policy ID"
+        file9 = "  ⭐ multisig.addr      - Multisig payment address (use this!)"
+        securityNotesTitle = "⚠️  SECURITY NOTES:"
+        secNote1 = "  • .xsk files contain private keys - NEVER share them"
+        secNote2 = "  • Each participant should keep only their own keys"
+        secNote3 = "  • Minimum {0} participants must sign transactions"
+        secNote4 = "  • All participants need their private keys to sign"
+        secNote5 = "  • Delete temporary files after moving to secure storage"
+        useMultisigAddr = "✓ Use multisig.addr to receive ADA (requires {0}-of-{1} signatures to spend)"
+        useIndividualAddr = "✓ Each participant can use their .payment.addr for individual transactions (1 signature)"
+        
+        # Errors
+        stepFailed = "Step {0} failed. Please try again."
+        retryStep = "Retry this step?"
+        alreadyFirstStep = "Already at first step."
+        invalidStepNumber = "Invalid step number. Staying at current step."
+        quitting = "Quitting..."
+        gotoPrompt = "Enter step number (1-5)"
+        invalidNumber = "Invalid number. Please try again."
+        invalidThreshold = "Threshold must be between 1 and {0}"
+    }
+    vi = @{
+        # Common
+        yes = "C"
+        no = "K"
+        enter = "Enter"
+        continue = "Tiếp tục"
+        pressEnter = "Nhấn Enter để tiếp tục"
+        
+        # Menu
+        menuContinue = "[C] Tiếp tục bước tiếp theo (mặc định)"
+        menuRedo = "[R] Làm lại bước này"
+        menuBack = "[B] Quay lại bước trước"
+        menuGoto = "[G] Nhảy đến bước cụ thể (1-5)"
+        menuQuit = "[Q] Thoát"
+        menuPrompt = "Nhập lựa chọn"
+        stepCompleted = "Bước {0}: {1} - Hoàn thành"
+        whatNext = "Bạn muốn làm gì tiếp theo?"
+        
+        # Step 0: Initialize
+        welcomeTitle = "Tạo Địa Chỉ Multisig Cardano - Hướng Dẫn Tương Tác"
+        usageGuide = "HƯỚNG DẪN SỬ DỤNG:"
+        usageDesc = "  • Script này sẽ hướng dẫn bạn tạo địa chỉ multisig qua 5 bước"
+        usageNav = "  • Sau mỗi bước, bạn có thể:"
+        usageNav1 = "    - Tiếp tục bước tiếp theo"
+        usageNav2 = "    - Làm lại bước hiện tại"
+        usageNav3 = "    - Quay lại bước trước để chỉnh sửa"
+        usageNav4 = "    - Nhảy đến bước cụ thể"
+        stepsTitle = "CÁC BƯỚC THỰC HIỆN:"
+        step1Desc = "  1. Chọn network (mainnet/testnet)"
+        step2Desc = "  2. Thiết lập người tham gia (mnemonic cho từng người)"
+        step3Desc = "  3. Tạo key cho tất cả người tham gia (đường dẫn 1854H shared)"
+        step4Desc = "  4. Cấu hình multisig policy (M-of-N, ràng buộc thời gian)"
+        step5Desc = "  5. Tạo multisig address"
+        securityTitle = "⚠️  BẢO MẬT QUAN TRỌNG:"
+        security1 = "  • Script này tạo các file chứa private keys"
+        security2 = "  • Giữ các file này an toàn và KHÔNG chia sẻ"
+        security3 = "  • Xóa các file tạm sau khi sử dụng xong"
+        security4 = "  • Mỗi người tham gia phải giữ key của mình an toàn"
+        checkingExe = "Đang kiểm tra cardano-address executable..."
+        exeNotFound = "❌ Không tìm thấy cardano-address executable trong thư mục hiện tại!"
+        exeDownload = "   Vui lòng tải cardano-address và đặt cùng thư mục với script này."
+        exeDownloadUrl = "   Tải tại: https://github.com/input-output-hk/cardano-addresses/releases"
+        exeFound = "✓ Tìm thấy: {0}"
+        pressStart = "Nhấn Enter để bắt đầu"
+        
+        # Step 1: Network
+        step1Title = "BƯỚC 1: Chọn Network"
+        selectNetwork = "Đã chọn network: {0}"
+        useTestnet = "Sử dụng testnet? (mặc định Không = mainnet)"
+        
+        # Step 2: Participants
+        step2Title = "BƯỚC 2: Thiết Lập Người Tham Gia"
+        enterParticipantCount = "Nhập tổng số người tham gia (M)"
+        participantSetup = "Thiết lập người tham gia #{0}: {1}"
+        enterParticipantName = "Nhập tên cho người tham gia #{0} (vd: alice, bob, charlie)"
+        chooseMnemonicMethod = "Chọn phương thức mnemonic cho {0}:"
+        mnemonicGenerate = "  [1] Tạo mnemonic mới (mặc định)"
+        mnemonicManual = "  [2] Nhập mnemonic thủ công"
+        mnemonicFile = "  [3] Dùng file có sẵn"
+        mnemonicChoice = "Nhập lựa chọn (1/2/3)"
+        enterWordCount = "Nhập số (9, 12, 15, 18, 21 24) [mặc định: 15]"
+        generatingMnemonic = "Đang tạo mnemonic cho {0}..."
+        mnemonicSaved = "Mnemonic đã lưu vào: {0}"
+        enterMnemonic = "Nhập các từ mnemonic (cách nhau bởi dấu cách) cho {0}"
+        enterFilePath = "Nhập đường dẫn file mnemonic cho {0}"
+        fileNotFound = "Không tìm thấy file: {0}"
+        participantsCreated = "Đã tạo thành công {0} người tham gia"
+        
+        # Step 3: Derive Keys
+        step3Title = "BƯỚC 3: Tạo Key Cho Tất Cả Người Tham Gia"
+        enterPaymentIndex = "Nhập payment key index (0-2147483647) [mặc định: 0]"
+        derivingKeys = "Đang tạo key cho người tham gia: {0}"
+        derivingRoot = "  → Đang tạo root key..."
+        derivingPayment = "  → Đang tạo payment key (1854H/1815H/0H/0/{0})..."
+        exportingPublic = "  → Đang xuất public key..."
+        calculatingHash = "  → Đang tính key hash..."
+        generatingPaymentAddr = "  → Đang tạo địa chỉ payment cá nhân..."
+        keysDerived = "Đã tạo key cho: {0}"
+        keyHash = "    Key hash: {0}"
+        paymentAddr = "    Địa chỉ payment: {0}"
+        allKeysDerived = "Đã tạo key thành công cho tất cả người tham gia"
+        
+        # Step 4: Configure Policy
+        step4Title = "BƯỚC 4: Cấu Hình Multisig Policy"
+        enterThreshold = "Nhập ngưỡng chữ ký N (số chữ ký tối thiểu, 1-{0})"
+        thresholdSet = "Đã thiết lập ngưỡng: cần {0} trong {1} chữ ký"
+        useTimeConstraints = "Thêm ràng buộc thời gian? (active_from/active_until)"
+        enterActiveFrom = "Nhập active_from slot (Enter để bỏ qua)"
+        enterActiveUntil = "Nhập active_until slot (Enter để bỏ qua)"
+        activeFromSet = "Active từ slot: {0}"
+        activeUntilSet = "Active đến slot: {0}"
+        noTimeConstraints = "Không có ràng buộc thời gian"
+        policyExpression = "Biểu thức multisig policy:"
+        policyConfigured = "Đã cấu hình multisig policy thành công"
+        
+        # Step 5: Generate Address
+        step5Title = "BƯỚC 5: Tạo Multisig Address"
+        generatingPolicy = "Đang tạo policy ID..."
+        policyId = "Policy ID: {0}"
+        generatingAddress = "Đang tạo multisig payment address..."
+        multisigAddress = "Multisig Address: {0}"
+        savingFiles = "Đang lưu file policy và address..."
+        addressGenerated = "Đã tạo multisig address thành công"
+        
+        # Final
+        completedTitle = "HOÀN THÀNH TẠO MULTISIG ADDRESS"
+        filesCreated = "Các file đã tạo trong thư mục keys/:"
+        participantFiles = "Người tham gia {0} ({1}):"
+        file1 = "  📄 {0}.phrase     - Mnemonic phrase"
+        file2 = "  🔐 {0}.root.xsk   - Root private key"
+        file3 = "  🔐 {0}.pay.{1}.xsk - Payment private key"
+        file4 = "  🔓 {0}.pay.{1}.xvk - Payment public key"
+        file5 = "  🔑 {0}.hash       - Key hash"
+        file6 = "  💳 {0}.payment.addr - Địa chỉ payment cá nhân"
+        policyFiles = "File Multisig Policy:"
+        file7 = "  📜 policy.txt         - Biểu thức policy"
+        file8 = "  🆔 policy_id.txt      - Policy ID"
+        file9 = "  ⭐ multisig.addr      - Multisig payment address (dùng cái này!)"
+        securityNotesTitle = "⚠️  LƯU Ý BẢO MẬT:"
+        secNote1 = "  • Các file .xsk chứa private keys - TUYỆT ĐỐI KHÔNG chia sẻ"
+        secNote2 = "  • Mỗi người tham gia chỉ nên giữ key của mình"
+        secNote3 = "  • Cần tối thiểu {0} người tham gia ký giao dịch"
+        secNote4 = "  • Tất cả người tham gia cần private keys để ký"
+        secNote5 = "  • Xóa các file tạm sau khi chuyển vào lưu trữ an toàn"
+        useMultisigAddr = "✓ Dùng multisig.addr để nhận ADA (cần {0}-trong-{1} chữ ký để chi tiêu)"
+        useIndividualAddr = "✓ Mỗi người có thể dùng .payment.addr để giao dịch cá nhân (1 chữ ký)"
+        
+        # Errors
+        stepFailed = "Bước {0} thất bại. Vui lòng thử lại."
+        retryStep = "Thử lại bước này?"
+        alreadyFirstStep = "Đã ở bước đầu tiên."
+        invalidStepNumber = "Số bước không hợp lệ. Ở lại bước hiện tại."
+        quitting = "Đang thoát..."
+        gotoPrompt = "Nhập số bước (1-5)"
+        invalidNumber = "Số không hợp lệ. Vui lòng thử lại."
+        invalidThreshold = "Ngưỡng phải từ 1 đến {0}"
+    }
 }
-if (-not $cardanoExe) {
-    Write-Err "Không tìm thấy cardano-address executable trong PATH hoặc thư mục hiện tại. Đặt cardano-address(.exe) cạnh script hoặc thêm vào PATH."
-    exit 1
-}
-Write-Info "Found cardano-address: $cardanoExe`n"
 
-# working folders
-$keysDir = Join-Path -Path (Get-Location) -ChildPath "keys"
-if (-not (Test-Path $keysDir)) { New-Item -ItemType Directory -Path $keysDir | Out-Null }
-
-# network tag
-if ($UseMainnet) { $networkTag = "mainnet" } else {
-    $useTest = Read-Host "Dùng testnet? (Y = testnet, N = mainnet) [default Y]"
-    if ([string]::IsNullOrWhiteSpace($useTest) -or $useTest.Trim().ToUpper().StartsWith("Y")) { $networkTag = "testnet" } else { $networkTag = "mainnet" }
+function Get-Text($key) {
+    return $script:strings[$script:lang][$key]
 }
-Write-Info "Network: $networkTag`n"
 
 function Prompt-YesNo($msg, $defaultYes=$true) {
-    $d = if ($defaultYes) { "Y" } else { "N" }
-    $r = Read-Host "$msg [Y/N] (default $d)"
-    if ([string]::IsNullOrWhiteSpace($r)) { return $defaultYes }
-    return $r.Trim().ToUpper().StartsWith('Y')
+    $choice = Read-Host "$msg [Y/N]"
+    if ([string]::IsNullOrWhiteSpace($choice)) { return $defaultYes }
+    return $choice.Trim().ToUpper().StartsWith('Y')
 }
 
-function Ensure-Int($s, $name) {
-    if (-not [Int64]::TryParse($s, [ref]$n)) {
-        throw "Giá trị $name không hợp lệ (phải là số nguyên)."
+function Show-StepMenu($stepName, $currentStep) {
+    Write-Host "`n─────────────────────────────────────────────────────────────────────" -ForegroundColor Yellow
+    Write-Host ("✓ " + (Get-Text "stepCompleted") -f $currentStep, $stepName) -ForegroundColor Green
+    Write-Host "─────────────────────────────────────────────────────────────────────" -ForegroundColor Yellow
+    Write-Host (Get-Text "whatNext")
+    Write-Host (Get-Text "menuContinue")
+    Write-Host (Get-Text "menuRedo")
+    Write-Host (Get-Text "menuBack")
+    Write-Host (Get-Text "menuGoto")
+    Write-Host (Get-Text "menuQuit")
+    
+    $choice = Read-Host (Get-Text "menuPrompt")
+    if ([string]::IsNullOrWhiteSpace($choice)) { return @{action='continue'} }
+    
+    switch ($choice.Trim().ToUpper()) {
+        'C' { return @{action='continue'} }
+        'R' { return @{action='redo'} }
+        'B' { return @{action='back'} }
+        'G' { 
+            $targetStep = Read-Host (Get-Text "gotoPrompt")
+            return @{action='goto'; step=[int]$targetStep}
+        }
+        'Q' { return @{action='quit'} }
+        default { return @{action='continue'} }
     }
-    return [int]$n
 }
 
-function Create-Mnemonic($name) {
-    $sizes = "12,15,24"
-    while ($true) {
-        $sz = Read-Host "Chọn kích thước mnemonic cho '$name' ($sizes). Enter để dùng 15"
-        if ([string]::IsNullOrWhiteSpace($sz)) { $sz = "15" }
-        if ($sz -in @("12","15","24")) { break } else { Write-Warn "Chỉ chấp nhận 12,15 hoặc 24" }
-    }
-    $outFile = Join-Path $keysDir "$name.phrase"
-    Write-Info "Tạo mnemonic (size=$sz) và lưu: $outFile"
-    & $cardanoExe recovery-phrase generate --size $sz > $outFile
-    if ($LASTEXITCODE -ne 0) { throw "Failed to generate mnemonic for $name" }
-    Write-Info "Mnemonic saved -> $outFile"
-    return $outFile
-}
-
-function Input-MnemonicManual($name) {
-    $mn = Read-Host "Dán mnemonic (cách nhau bằng space) cho '$name' rồi Enter"
-    $outFile = Join-Path $keysDir "$name.phrase"
-    Set-Content -Path $outFile -Value $mn -Encoding ascii
-    Write-Info "Saved manual mnemonic -> $outFile"
-    return $outFile
-}
-
-function Derive-Root($name, $phraseFile) {
-    $out = Join-Path $keysDir "$name.root.xsk"
-    Write-Info "Derive root.xsk for $name -> $out"
-    Get-Content $phraseFile -Raw | & $cardanoExe key from-recovery-phrase Shelley > $out
-    if ($LASTEXITCODE -ne 0) { throw "Failed deriving root for $name" }
-    return $out
-}
-
-function Derive-ChildAndXvk($name, $rootFile, $pathIndex) {
-    # pathIndex is integer to be appended to 1854H/1815H/0H/0/<index>
-    $child = Join-Path $keysDir "$name.pay.$pathIndex.xsk"
-    $xvk   = Join-Path $keysDir "$name.pay.$pathIndex.xvk"
-    $deriv = "1854H/1815H/0H/0/$pathIndex"
-    Write-Info "Derive child ($deriv) -> $child"
-    Get-Content $rootFile -Raw | & $cardanoExe key child $deriv > $child
-    if ($LASTEXITCODE -ne 0) { throw "Failed deriving child for $name with index $pathIndex" }
-    Write-Info "Export public (without chain code) -> $xvk"
-    Get-Content $child -Raw | & $cardanoExe key public --without-chain-code > $xvk
-    if ($LASTEXITCODE -ne 0) { throw "Failed exporting xvk for $name" }
-    return @{ Child = $child; Xvk = $xvk }
-}
-
-function Get-KeyHashFromXvk($xvkFile) {
-    $out = & $cardanoExe key hash < $xvkFile
-    if ($LASTEXITCODE -ne 0) { throw "Failed to compute key hash from $xvkFile" }
-    return $out.Trim()
-}
-
-function Show-ExistingKeys() {
-    $files = Get-ChildItem -Path $keysDir -File | Where-Object { $_.Name -match '\.(phrase|root\.xsk|pay\..*\.xvk|hash)$' } | Sort-Object Name
-    if ($files.Count -eq 0) { Write-Host "(No files in keys/)"; return }
-    Write-Host "Existing files in keys/:"
-    $files | ForEach-Object { Write-Host " - $($_.Name)" }
-}
-
-# MAIN INTERACTIVE MENU
-while ($true) {
-    Clear-Host
-    Write-Host "=== Manual multisig builder (shared keys - 1854) ===" -ForegroundColor Green
-    Write-Host "Working folder: $(Get-Location)"
-    Write-Host "Keys folder: $keysDir"
+function Step-Initialize {
+    Write-Host "`n╔════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host ("║  " + (Get-Text "welcomeTitle").PadRight(66) + "║") -ForegroundColor Cyan
+    Write-Host "╚════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    
+    Write-Host ("`n" + (Get-Text "usageGuide")) -ForegroundColor Yellow
+    Write-Host (Get-Text "usageDesc")
+    Write-Host (Get-Text "usageNav")
+    Write-Host (Get-Text "usageNav1")
+    Write-Host (Get-Text "usageNav2")
+    Write-Host (Get-Text "usageNav3")
+    Write-Host (Get-Text "usageNav4")
     Write-Host ""
-    Write-Host "Menu:"
-    Write-Host " 1) Tạo hoặc nhập mnemonic (participant)"
-    Write-Host " 2) Derive root.xsk từ mnemonic"
-    Write-Host " 3) Derive payment key (1854H shared) và export xvk"
-    Write-Host " 4) Tính key-hash từ xvk (và lưu)"
-    Write-Host " 5) Xem danh sách keys hiện có"
-    Write-Host " 6) Build multisig policy & address (manual, includes active_from/active_until)"
-    Write-Host " 7) Exit"
-    $opt = Read-Host "Chọn bước (1-7)"
-    switch ($opt) {
-        '1' {
-            $name = Read-Host "Đặt tên participant (ví dụ alice) (không có space)"
-            if ([string]::IsNullOrWhiteSpace($name)) { Write-Warn "Tên không hợp lệ"; Pause-Continue; continue }
-            $choice = Read-Host "Tạo mới (G) hay nhập thủ công (I)? [G/I] (default G)"
-            if ([string]::IsNullOrWhiteSpace($choice) -or $choice.Trim().ToUpper().StartsWith('G')) {
-                try { Create-Mnemonic $name } catch { Write-Err $_.Exception.Message }
-            } else {
-                try { Input-MnemonicManual $name } catch { Write-Err $_.Exception.Message }
+    Write-Host (Get-Text "stepsTitle") -ForegroundColor Yellow
+    Write-Host (Get-Text "step1Desc")
+    Write-Host (Get-Text "step2Desc")
+    Write-Host (Get-Text "step3Desc")
+    Write-Host (Get-Text "step4Desc")
+    Write-Host (Get-Text "step5Desc")
+    Write-Host ""
+    Write-Host (Get-Text "securityTitle") -ForegroundColor Red
+    Write-Host (Get-Text "security1")
+    Write-Host (Get-Text "security2")
+    Write-Host (Get-Text "security3")
+    Write-Host (Get-Text "security4")
+    Write-Host ""
+    
+    # Locate cardano-address executable
+    Write-Host (Get-Text "checkingExe") -ForegroundColor Cyan
+    $exePaths = @(".\cardano-address.exe", ".\cardano-address")
+    $script:cardanoExe = $null
+    foreach ($p in $exePaths) {
+        if (Test-Path $p) { $script:cardanoExe = $p; break }
+    }
+    if (-not $script:cardanoExe) {
+        Write-Host ""
+        Write-Error (Get-Text "exeNotFound")
+        Write-Host (Get-Text "exeDownload") -ForegroundColor Yellow
+        Write-Host (Get-Text "exeDownloadUrl") -ForegroundColor Yellow
+        return $false
+    }
+    Write-Host ((Get-Text "exeFound") -f $script:cardanoExe) -ForegroundColor Green
+    
+    # Create keys directory
+    $script:keysDir = ".\keys"
+    if (-not (Test-Path $script:keysDir)) {
+        New-Item -ItemType Directory -Path $script:keysDir | Out-Null
+    }
+    
+    Write-Host ""
+    $null = Read-Host (Get-Text "pressStart")
+    return $true
+}
+
+function Step-SelectNetwork {
+    Write-Host ("`n=== " + (Get-Text "step1Title") + " ===") -ForegroundColor Cyan
+    
+    if ($UseMainnet) {
+        $script:networkTag = "mainnet"
+    } else {
+        $isTest = Prompt-YesNo (Get-Text "useTestnet") $false
+        $script:networkTag = if ($isTest) { "testnet" } else { "mainnet" }
+    }
+    Write-Host ((Get-Text "selectNetwork") -f $script:networkTag) -ForegroundColor Green
+    return $true
+}
+
+function Step-SetupParticipants {
+    Write-Host ("`n=== " + (Get-Text "step2Title") + " ===") -ForegroundColor Cyan
+    
+    # Get number of participants
+    $countInput = Read-Host (Get-Text "enterParticipantCount")
+    try {
+        $script:participantCount = [int]$countInput
+        if ($script:participantCount -lt 1) { throw }
+    } catch {
+        Write-Error (Get-Text "invalidNumber")
+        return $false
+    }
+    
+    $script:participants = @()
+    
+    for ($i = 1; $i -le $script:participantCount; $i++) {
+        Write-Host ("`n" + ((Get-Text "participantSetup") -f $i, "")) -ForegroundColor Yellow
+        
+        # Get participant name
+        $name = Read-Host ((Get-Text "enterParticipantName") -f $i)
+        if ([string]::IsNullOrWhiteSpace($name)) { 
+            $name = "participant$i"
+        }
+        
+        # Choose mnemonic method
+        Write-Host ((Get-Text "chooseMnemonicMethod") -f $name)
+        Write-Host (Get-Text "mnemonicGenerate")
+        Write-Host (Get-Text "mnemonicManual")
+        Write-Host (Get-Text "mnemonicFile")
+        
+        $method = Read-Host (Get-Text "mnemonicChoice")
+        if ([string]::IsNullOrWhiteSpace($method)) { $method = "G" }
+        
+        $phraseFile = Join-Path $script:keysDir "$name.phrase"
+        
+        switch ($method.Trim().ToUpper()) {
+            'M' {
+                # Manual entry
+                $mnemonic = Read-Host ((Get-Text "enterMnemonic") -f $name)
+                Set-Content -Path $phraseFile -Value $mnemonic -Encoding UTF8
+                Write-Host ((Get-Text "mnemonicSaved") -f $phraseFile) -ForegroundColor Green
             }
-            Pause-Continue
+            'F' {
+                # From file
+                $srcFile = Read-Host ((Get-Text "enterFilePath") -f $name)
+                if (-not (Test-Path $srcFile)) {
+                    Write-Error ((Get-Text "fileNotFound") -f $srcFile)
+                    return $false
+                }
+                Copy-Item $srcFile $phraseFile -Force
+                Write-Host ((Get-Text "mnemonicSaved") -f $phraseFile) -ForegroundColor Green
+            }
+            default {
+                # Generate
+                $sizeInput = Read-Host (Get-Text "enterWordCount")
+                $size = if ([string]::IsNullOrWhiteSpace($sizeInput)) { "15" } else { $sizeInput }
+                
+                Write-Host ((Get-Text "generatingMnemonic") -f $name)
+                $mnemonic = & $script:cardanoExe recovery-phrase generate --size $size
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Error "Failed to generate mnemonic"
+                    return $false
+                }
+                Set-Content -Path $phraseFile -Value $mnemonic -Encoding UTF8
+                Write-Host ((Get-Text "mnemonicSaved") -f $phraseFile) -ForegroundColor Green
+            }
         }
-        '2' {
-            Show-ExistingKeys
-            $name = Read-Host "Nhập tên participant để derive root (vd: alice)"
-            $phraseFile = Join-Path $keysDir "$name.phrase"
-            if (-not (Test-Path $phraseFile)) { Write-Warn "Không tìm thấy $phraseFile"; Pause-Continue; continue }
-            try { Derive-Root $name $phraseFile; Write-Info "root.xsk saved for $name" } catch { Write-Err $_.Exception.Message }
-            Pause-Continue
+        
+        $script:participants += @{
+            Name = $name
+            PhraseFile = $phraseFile
         }
-        '3' {
-            Show-ExistingKeys
-            $name = Read-Host "Nhập tên participant để derive payment key (vd: alice)"
-            $rootFile = Join-Path $keysDir "$name.root.xsk"
-            if (-not (Test-Path $rootFile)) { Write-Warn "Không tìm thấy $rootFile. Hãy chạy bước 2 trước."; Pause-Continue; continue }
-            $idxRaw = Read-Host "Nhập index cho payment child (số nguyên 0..2147483647). Enter=0"
-            if ([string]::IsNullOrWhiteSpace($idxRaw)) { $idxRaw = "0" }
-            try { $idx = Ensure-Int $idxRaw "index" } catch { Write-Err $_; Pause-Continue; continue }
+    }
+    
+    Write-Host ("`n" + ((Get-Text "participantsCreated") -f $script:participantCount)) -ForegroundColor Green
+    return $true
+}
+
+function Step-DeriveKeys {
+    Write-Host ("`n=== " + (Get-Text "step3Title") + " ===") -ForegroundColor Cyan
+    
+    # Get payment index
+    $indexInput = Read-Host (Get-Text "enterPaymentIndex")
+    $script:paymentIndex = if ([string]::IsNullOrWhiteSpace($indexInput)) { "0" } else { $indexInput }
+    
+    $script:keyHashes = @()
+    
+    foreach ($participant in $script:participants) {
+        $name = $participant.Name
+        Write-Host ("`n" + ((Get-Text "derivingKeys") -f $name)) -ForegroundColor Yellow
+        
+        # Derive root key
+        Write-Host (Get-Text "derivingRoot")
+        $rootFile = Join-Path $script:keysDir "$name.root.xsk"
+        $phraseContent = Get-Content $participant.PhraseFile -Raw
+        $rootKey = $phraseContent | & $script:cardanoExe key from-recovery-phrase Shelley
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to derive root key for $name"
+            return $false
+        }
+        Set-Content -Path $rootFile -Value $rootKey -NoNewline -Encoding ASCII
+        
+        # Derive payment key (1854H shared path)
+        Write-Host ((Get-Text "derivingPayment") -f $script:paymentIndex)
+        $payPath = "1854H/1815H/0H/0/$($script:paymentIndex)"
+        $payFile = Join-Path $script:keysDir "$name.pay.$($script:paymentIndex).xsk"
+        $rootKeyContent = Get-Content $rootFile -Raw
+        $payKey = $rootKeyContent | & $script:cardanoExe key child $payPath
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to derive payment key for $name"
+            return $false
+        }
+        Set-Content -Path $payFile -Value $payKey -NoNewline -Encoding ASCII
+        
+        # Export public key
+        Write-Host (Get-Text "exportingPublic")
+        $xvkFile = Join-Path $script:keysDir "$name.pay.$($script:paymentIndex).xvk"
+        $payKeyContent = Get-Content $payFile -Raw
+        $pubKey = $payKeyContent | & $script:cardanoExe key public --without-chain-code
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to export public key for $name"
+            return $false
+        }
+        Set-Content -Path $xvkFile -Value $pubKey -NoNewline -Encoding ASCII
+        
+        # Calculate key hash
+        Write-Host (Get-Text "calculatingHash")
+        $xvkContent = Get-Content $xvkFile -Raw
+        $keyHash = $xvkContent | & $script:cardanoExe key hash
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to calculate key hash for $name"
+            return $false
+        }
+        $keyHash = $keyHash.Trim()
+        
+        # Save hash to file
+        $hashFile = Join-Path $script:keysDir "$name.hash"
+        Set-Content -Path $hashFile -Value $keyHash -Encoding UTF8
+        
+        # Generate individual payment address for this participant
+        Write-Host (Get-Text "generatingPaymentAddr")
+        $paymentAddr = $xvkContent | & $script:cardanoExe address payment --network-tag $script:networkTag
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Failed to generate payment address for $name"
+            $paymentAddr = $null
+        } else {
+            $paymentAddr = $paymentAddr.Trim()
+            $paymentAddrFile = Join-Path $script:keysDir "$name.payment.addr"
+            Set-Content -Path $paymentAddrFile -Value $paymentAddr -Encoding UTF8
+        }
+        
+        Write-Host ((Get-Text "keysDerived") -f $name) -ForegroundColor Green
+        Write-Host ((Get-Text "keyHash") -f $keyHash) -ForegroundColor Cyan
+        if ($paymentAddr) {
+            Write-Host ((Get-Text "paymentAddr") -f $paymentAddr) -ForegroundColor Magenta
+        }
+        
+        $script:keyHashes += $keyHash
+        $participant.KeyHash = $keyHash
+        $participant.XvkFile = $xvkFile
+        $participant.PaymentAddr = $paymentAddr
+    }
+    
+    Write-Host ("`n" + (Get-Text "allKeysDerived")) -ForegroundColor Green
+    return $true
+}
+
+function Step-ConfigurePolicy {
+    Write-Host ("`n=== " + (Get-Text "step4Title") + " ===") -ForegroundColor Cyan
+    
+    # Get threshold
+    $thresholdInput = Read-Host ((Get-Text "enterThreshold") -f $script:participantCount)
+    try {
+        $script:threshold = [int]$thresholdInput
+        if ($script:threshold -lt 1 -or $script:threshold -gt $script:participantCount) {
+            Write-Error ((Get-Text "invalidThreshold") -f $script:participantCount)
+            return $false
+        }
+    } catch {
+        Write-Error (Get-Text "invalidNumber")
+        return $false
+    }
+    
+    Write-Host ((Get-Text "thresholdSet") -f $script:threshold, $script:participantCount) -ForegroundColor Green
+    
+    # Time constraints
+    $useTime = Prompt-YesNo (Get-Text "useTimeConstraints") $false
+    
+    $script:activeFrom = $null
+    $script:activeUntil = $null
+    
+    if ($useTime) {
+        $fromInput = Read-Host (Get-Text "enterActiveFrom")
+        if (-not [string]::IsNullOrWhiteSpace($fromInput)) {
             try {
-                $res = Derive-ChildAndXvk $name $rootFile $idx
-                Write-Info "Child xsk: $($res.Child)"
-                Write-Info "Public xvk: $($res.Xvk)"
-            } catch { Write-Err $_.Exception.Message }
-            Pause-Continue
-        }
-        '4' {
-            Show-ExistingKeys
-            $xvkFile = Read-Host "Nhập đường dẫn tới .xvk (ví dụ keys/alice.pay.0.xvk) hoặc tên participant (alice)"
-            if ($xvkFile -and -not (Test-Path $xvkFile)) {
-                # if provided just name
-                $maybe = Join-Path $keysDir "$xvkFile.pay.0.xvk"
-                if (Test-Path $maybe) { $xvkFile = $maybe } else {
-                    # try general match
-                    $matches = Get-ChildItem $keysDir -Filter "$xvkFile*.xvk" -File -ErrorAction SilentlyContinue
-                    if ($matches.Count -eq 1) { $xvkFile = $matches[0].FullName } elseif ($matches.Count -gt 1) {
-                        Write-Host "Tìm được nhiều file:"
-                        $matches | ForEach-Object { Write-Host " - $($_.Name)" }
-                        $xvkFile = Read-Host "Gõ đường dẫn đầy đủ tới xvk bạn muốn dùng"
-                    } else {
-                        Write-Warn "Không tìm thấy xvk cho '$xvkFile'"; Pause-Continue; continue
-                    }
-                }
+                $script:activeFrom = [int]$fromInput
+                Write-Host ((Get-Text "activeFromSet") -f $script:activeFrom) -ForegroundColor Green
+            } catch {
+                Write-Warning (Get-Text "invalidNumber")
             }
-            if (-not (Test-Path $xvkFile)) { Write-Warn "Không tìm thấy file xvk: $xvkFile"; Pause-Continue; continue }
+        }
+        
+        $untilInput = Read-Host (Get-Text "enterActiveUntil")
+        if (-not [string]::IsNullOrWhiteSpace($untilInput)) {
             try {
-                $hash = Get-KeyHashFromXvk $xvkFile
-                Write-Info "Key hash: $hash"
-                $save = Read-Host "Lưu hash vào file? Nhập tên file (Enter để skip). Ví dụ alice.hash"
-                if (-not [string]::IsNullOrWhiteSpace($save)) {
-                    $outf = Join-Path $keysDir $save
-                    Set-Content -Path $outf -Value $hash -Encoding ascii
-                    Write-Info "Saved -> $outf"
-                }
-            } catch { Write-Err $_.Exception.Message }
-            Pause-Continue
+                $script:activeUntil = [int]$untilInput
+                Write-Host ((Get-Text "activeUntilSet") -f $script:activeUntil) -ForegroundColor Green
+            } catch {
+                Write-Warning (Get-Text "invalidNumber")
+            }
         }
-        '5' {
-            Show-ExistingKeys
-            Pause-Continue
+    } else {
+        Write-Host (Get-Text "noTimeConstraints") -ForegroundColor Green
+    }
+    
+    # Build policy expression
+    $sigParts = $script:keyHashes | ForEach-Object { "sig $_" }
+    $sigList = $sigParts -join ", "
+    $atLeastExpr = "at_least $($script:threshold) [ $sigList ]"
+    
+    if ($null -ne $script:activeFrom -or $null -ne $script:activeUntil) {
+        $innerParts = @()
+        $innerParts += $atLeastExpr
+        if ($null -ne $script:activeFrom) { 
+            $innerParts += "active_from $($script:activeFrom)" 
         }
-        '6' {
-            # Build multisig policy & address (manual)
-            Write-Host "`n=== Build multisig policy & address ===" -ForegroundColor Green
-            $Mraw = Read-Host "Nhập tổng số participant M (ví dụ 3)"
-            try { $M = Ensure-Int $Mraw "M" } catch { Write-Err $_; Pause-Continue; continue }
-            $Nraw = Read-Host "Nhập threshold N (số ký tối thiểu, ≤ M)"
-            try { $N = Ensure-Int $Nraw "N" } catch { Write-Err $_; Pause-Continue; continue }
-            if ($N -lt 1 -or $N -gt $M) { Write-Err "N phải ≥1 và ≤ M"; Pause-Continue; continue }
+        if ($null -ne $script:activeUntil) { 
+            $innerParts += "active_until $($script:activeUntil)" 
+        }
+        $script:policyExpr = "all [ " + ($innerParts -join ", ") + " ]"
+    } else {
+        $script:policyExpr = $atLeastExpr
+    }
+    
+    Write-Host ("`n" + (Get-Text "policyExpression")) -ForegroundColor Yellow
+    Write-Host $script:policyExpr -ForegroundColor Cyan
+    
+    Write-Host ("`n" + (Get-Text "policyConfigured")) -ForegroundColor Green
+    return $true
+}
 
-            $hashes = @()
-            for ($i=1; $i -le $M; $i++) {
-                Write-Host "`nParticipant #$i"
-                $choice = Read-Host "Bạn muốn (1) chọn từ keys/*.hash hoặc (2) tính từ xvk hiện có hoặc (3) nhập thủ công? [1/2/3] (default 2)"
-                if ([string]::IsNullOrWhiteSpace($choice)) { $choice = "2" }
-                switch ($choice.Trim()) {
-                    '1' {
-                        $list = Get-ChildItem $keysDir -Filter "*.hash" -File -ErrorAction SilentlyContinue
-                        if ($list.Count -eq 0) { Write-Warn "Không có .hash trong keys/"; $i--; continue }
-                        Write-Host "Available .hash files:"
-                        $list | ForEach-Object { Write-Host " - $($_.Name)" }
-                        $sel = Read-Host "Nhập tên file .hash (ví dụ alice.hash)"
-                        $hf = Join-Path $keysDir $sel
-                        if (-not (Test-Path $hf)) { Write-Warn "File không tồn tại"; $i--; continue }
-                        $h = (Get-Content $hf -Raw).Trim()
-                        $hashes += $h
-                    }
-                    '3' {
-                        $h = Read-Host "Dán key hash (hex) cho participant #$i"
-                        if ([string]::IsNullOrWhiteSpace($h)) { Write-Warn "Empty"; $i--; continue }
-                        $hashes += $h.Trim()
-                    }
-                    default {
-                        # option 2: compute from xvk
-                        $xvks = Get-ChildItem $keysDir -Filter "*.xvk" -File -ErrorAction SilentlyContinue
-                        if ($xvks.Count -gt 0) {
-                            Write-Host "Available xvk files:"
-                            $xvks | ForEach-Object { Write-Host " - $($_.Name)" }
-                        } else { Write-Warn "Không có xvk trong keys/"; }
-                        $xvkSel = Read-Host "Nhập đường dẫn tới .xvk (hoặc tên participant như alice.pay.0.xvk)"
-                        if (-not (Test-Path $xvkSel)) {
-                            # try relative in keys
-                            $maybe = Join-Path $keysDir $xvkSel
-                            if (Test-Path $maybe) { $xvkSel = $maybe } else {
-                                $matches = Get-ChildItem $keysDir -Filter "$xvkSel*.xvk" -File -ErrorAction SilentlyContinue
-                                if ($matches.Count -eq 1) { $xvkSel = $matches[0].FullName } elseif ($matches.Count -gt 1) {
-                                    Write-Host "Tìm thấy nhiều file:"
-                                    $matches | ForEach-Object { Write-Host " - $($_.Name)" }
-                                    $xvkSel = Read-Host "Gõ đường dẫn đầy đủ tới xvk"
-                                } else { Write-Warn "Không tìm thấy $xvkSel"; $i--; continue }
-                            }
-                        }
-                        try {
-                            $h = Get-KeyHashFromXvk $xvkSel
-                            Write-Info "Key hash = $h"
-                            $save = Read-Host "Lưu hash này vào file? (nhập tên file, Enter để skip)"
-                            if (-not [string]::IsNullOrWhiteSpace($save)) {
-                                $hf = Join-Path $keysDir $save
-                                Set-Content -Path $hf -Value $h -Encoding ascii
-                                Write-Info "Saved -> $hf"
-                            }
-                            $hashes += $h
-                        } catch { Write-Err $_.Exception.Message; $i--; continue }
-                    }
-                }
-            } # end for participants
+function Step-GenerateAddress {
+    Write-Host ("`n=== " + (Get-Text "step5Title") + " ===") -ForegroundColor Cyan
+    
+    # Generate policy ID
+    Write-Host (Get-Text "generatingPolicy")
+    $script:policyId = & $script:cardanoExe address policy --script $script:policyExpr
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Failed to generate policy ID"
+        return $false
+    }
+    $script:policyId = $script:policyId.Trim()
+    Write-Host ((Get-Text "policyId") -f $script:policyId) -ForegroundColor Cyan
+    
+    # Generate multisig address
+    Write-Host (Get-Text "generatingAddress")
+    $script:multisigAddr = & $script:cardanoExe address payment --network-tag $script:networkTag --script $script:policyExpr
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Failed to generate multisig address"
+        return $false
+    }
+    $script:multisigAddr = $script:multisigAddr.Trim()
+    Write-Host ((Get-Text "multisigAddress") -f $script:multisigAddr) -ForegroundColor Yellow
+    
+    # Save files
+    Write-Host (Get-Text "savingFiles")
+    $policyFile = Join-Path $script:keysDir "policy.txt"
+    $policyIdFile = Join-Path $script:keysDir "policy_id.txt"
+    $addrFile = Join-Path $script:keysDir "multisig.addr"
+    
+    Set-Content -Path $policyFile -Value $script:policyExpr -Encoding UTF8
+    Set-Content -Path $policyIdFile -Value $script:policyId -Encoding UTF8
+    Set-Content -Path $addrFile -Value $script:multisigAddr -Encoding UTF8
+    
+    Write-Host ("`n" + (Get-Text "addressGenerated")) -ForegroundColor Green
+    return $true
+}
 
-            # optional active_from / active_until
-            $activeFrom = Read-Host "Nhập active_from slot (Enter để bỏ qua)"
-            if (-not [string]::IsNullOrWhiteSpace($activeFrom)) { try { $activeFrom = Ensure-Int $activeFrom "active_from" } catch { Write-Err $_; Pause-Continue; continue } }
-            $activeUntil = Read-Host "Nhập active_until slot (Enter để bỏ qua)"
-            if (-not [string]::IsNullOrWhiteSpace($activeUntil)) { try { $activeUntil = Ensure-Int $activeUntil "active_until" } catch { Write-Err $_; Pause-Continue; continue } }
+# Main execution flow with navigation
+$currentStep = 0  # Start from 0 (initialize/welcome screen)
+$maxStep = 5      # Now we have 5 actual steps
+$completed = $false
 
-            # build expression string
-            $sigParts = $hashes | ForEach-Object { "sig $_" }
-            $sigList = $sigParts -join ", "
-            $atLeastExpr = "at_least $N [ $sigList ]"
-            if ($null -ne $activeFrom -or $null -ne $activeUntil) {
-                $innerParts = @()
-                $innerParts += $atLeastExpr
-                if ($null -ne $activeFrom) { $innerParts += "active_from $activeFrom" }
-                if ($null -ne $activeUntil) { $innerParts += "active_until $activeUntil" }
-                $expr = "all [ " + ($innerParts -join ", ") + " ]"
+while (-not $completed) {
+    $success = $false
+    
+    switch ($currentStep) {
+        0 { $success = Step-Initialize }
+        1 { $success = Step-SelectNetwork }
+        2 { $success = Step-SetupParticipants }
+        3 { $success = Step-DeriveKeys }
+        4 { $success = Step-ConfigurePolicy }
+        5 { $success = Step-GenerateAddress }
+    }
+    
+    if (-not $success) {
+        Write-Host ("`n" + ((Get-Text "stepFailed") -f $currentStep)) -ForegroundColor Red
+        $retry = Prompt-YesNo (Get-Text "retryStep") $true
+        if (-not $retry) { break }
+        continue
+    }
+    
+    # Show navigation menu after successful step (skip for step 0 - Initialize)
+    if ($currentStep -eq 0) {
+        $currentStep++
+        continue
+    }
+    
+    $stepNames = if ($script:lang -eq "vi") {
+        @("Chọn Network", "Thiết Lập Người Tham Gia", "Tạo Keys", 
+          "Cấu Hình Policy", "Tạo Address")
+    } else {
+        @("Select Network", "Setup Participants", "Derive Keys", 
+          "Configure Policy", "Generate Address")
+    }
+    $nav = Show-StepMenu $stepNames[$currentStep - 1] $currentStep
+    
+    switch ($nav.action) {
+        'continue' { 
+            if ($currentStep -eq $maxStep) {
+                $completed = $true
             } else {
-                $expr = $atLeastExpr
+                $currentStep++
             }
-
-            Write-Host "`nFinal policy expression:`n$expr`n"
-
-            $savePolicyName = Read-Host "Nhập tên file để lưu policy string (ví dụ policy_2of3.txt) (Enter để skip saving)"
-            if (-not [string]::IsNullOrWhiteSpace($savePolicyName)) {
-                $pf = Join-Path $keysDir $savePolicyName
-                Set-Content -Path $pf -Value $expr -Encoding ascii
-                Write-Info "Saved policy expression -> $pf"
+        }
+        'redo' { 
+            # Stay at current step (will loop and redo)
+        }
+        'back' { 
+            if ($currentStep -gt 1) {
+                $currentStep--
+            } else {
+                Write-Host (Get-Text "alreadyFirstStep") -ForegroundColor Yellow
             }
-
-            # call cardano-address to get policy id (address policy)
-            Write-Info "Generating policy id via cardano-address..."
-            $policyId = & $cardanoExe address policy --script $expr
-            if ($LASTEXITCODE -ne 0) { Write-Err "Failed to build policy id"; Pause-Continue; continue }
-            $policyId = $policyId.Trim()
-            Write-Info "Policy ID: $policyId"
-
-            $savePolicyId = Read-Host "Lưu policy id vào file (ví dụ policy_id.txt)? Enter để skip"
-            if (-not [string]::IsNullOrWhiteSpace($savePolicyId)) {
-                $outp = Join-Path $keysDir $savePolicyId
-                Set-Content -Path $outp -Value $policyId -Encoding ascii
-                Write-Info "Saved -> $outp"
+        }
+        'goto' {
+            if ($nav.step -ge 1 -and $nav.step -le $maxStep) {
+                $currentStep = $nav.step
+            } else {
+                Write-Host (Get-Text "invalidStepNumber") -ForegroundColor Yellow
             }
+        }
+        'quit' {
+            Write-Host (Get-Text "quitting") -ForegroundColor Red
+            exit 0
+        }
+    }
+}
 
-            # Build multisig payment address
-            Write-Info "Building multisig payment address..."
-            $addrOut = & $cardanoExe address payment --network-tag $networkTag --script $expr
-            if ($LASTEXITCODE -ne 0) { Write-Err "Failed to build multisig address"; Pause-Continue; continue }
-            $addrOut = $addrOut.Trim()
-            Write-Host "`nMultisig payment address:`n$addrOut`n"
-            $addrFile = Read-Host "Tên file lưu address (ví dụ multisig.addr) (Enter để use multisig.addr)"
-            if ([string]::IsNullOrWhiteSpace($addrFile)) { $addrFile = "multisig.addr" }
-            $addrPath = Join-Path $keysDir $addrFile
-            Set-Content -Path $addrPath -Value $addrOut -Encoding ascii
-            Write-Info "Saved address -> $addrPath"
+# Final summary
+Write-Host "`n╔════════════════════════════════════════════════════════════════════╗" -ForegroundColor Green
+Write-Host ("║  " + (Get-Text "completedTitle").PadRight(66) + "║") -ForegroundColor Green
+Write-Host "╚════════════════════════════════════════════════════════════════════╝" -ForegroundColor Green
 
-            Pause-Continue
-        }
-        '7' {
-            Write-Host "Exit."
-            break
-        }
-        default {
-            Write-Warn "Lựa chọn không hợp lệ"
-            Pause-Continue
-        }
-    } # switch
-} # while
+Write-Host ("`n" + (Get-Text "filesCreated")) -ForegroundColor Yellow
+
+# Show participant files
+foreach ($participant in $script:participants) {
+    Write-Host ("`n" + ((Get-Text "participantFiles") -f $participant.Name, $participant.Name)) -ForegroundColor Cyan
+    Write-Host ((Get-Text "file1") -f $participant.Name)
+    Write-Host ((Get-Text "file2") -f $participant.Name)
+    Write-Host ((Get-Text "file3") -f $participant.Name, $script:paymentIndex)
+    Write-Host ((Get-Text "file4") -f $participant.Name, $script:paymentIndex)
+    Write-Host ((Get-Text "file5") -f $participant.Name)
+    if ($participant.PaymentAddr) {
+        Write-Host ((Get-Text "file6") -f $participant.Name)
+        Write-Host "     $($participant.PaymentAddr)" -ForegroundColor Gray
+    }
+}
+
+# Show policy files
+Write-Host ("`n" + (Get-Text "policyFiles")) -ForegroundColor Cyan
+Write-Host (Get-Text "file7")
+Write-Host (Get-Text "file8")
+Write-Host (Get-Text "file9")
+
+Write-Host ("`n" + (Get-Text "securityNotesTitle")) -ForegroundColor Red
+Write-Host (Get-Text "secNote1")
+Write-Host (Get-Text "secNote2")
+Write-Host ((Get-Text "secNote3") -f $script:threshold)
+Write-Host (Get-Text "secNote4")
+Write-Host (Get-Text "secNote5")
+Write-Host ""
+Write-Host ((Get-Text "useMultisigAddr") -f $script:threshold, $script:participantCount) -ForegroundColor Green
+Write-Host (Get-Text "useIndividualAddr") -ForegroundColor Green
