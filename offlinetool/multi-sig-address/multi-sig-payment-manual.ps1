@@ -112,6 +112,7 @@ $script:strings = @{
         indexMethodFile = "  [2] Load from saved address file"
         indexMethodInput = "  [3] Input address manually"
         indexMethodChoice = "Enter choice (1/2/3)"
+        enterStakeAccountIndex = "Enter stake account index (0H -> 2^31-1) [default: 0]"
         enterPaymentIndex = "Enter payment key index (0-2147483647) [default: 0]"
         enterAddressFile = "Enter path to saved address file"
         enterAddress = "Enter address manually"
@@ -256,12 +257,13 @@ $script:strings = @{
         indexMethodFile = "  [2] Tải từ file địa chỉ có sẵn"
         indexMethodInput = "  [3] Nhập địa chỉ thủ công"
         indexMethodChoice = "Nhập lựa chọn (1/2/3)"
+        enterStakeAccountIndex = "Nhập số index cho stake account (0H -> 2^31-1) [mặc định: 0]"
         enterPaymentIndex = "Nhập payment key index (0-2147483647) [mặc định: 0]"
         enterAddressFile = "Nhập đường dẫn đến file địa chỉ"
         enterAddress = "Nhập địa chỉ thủ công"
         derivingKeys = "Đang tạo key cho người tham gia: {0}"
         derivingRoot = "  → Đang tạo root key..."
-        derivingPayment = "  → Đang tạo payment key (1854H/1815H/0H/0/{0})..."
+        derivingPayment = "  → Đang tạo payment key (1854H/1815H/{0}H/0/{1})..."
         exportingPublic = "  → Đang xuất public key..."
         calculatingHash = "  → Đang tính key hash..."
         generatingPaymentAddr = "  → Đang tạo địa chỉ payment cá nhân..."
@@ -588,9 +590,25 @@ function Step-DeriveKeys {
         }
         Set-Content -Path $rootFile -Value $rootKey -NoNewline -Encoding ASCII
         
-        # Derive payment key (1854H shared path)
-        Write-Host ((Get-Text "derivingPayment") -f $participant.PaymentIndex)
-        $payPath = "1854H/1815H/0H/0/$($participant.PaymentIndex)"
+        # Get stake index if not already set
+        if (-not $participant.StakeIndex) {
+            $participant.StakeIndex = Read-Host "Enter stake account index for $($participant.Name) (0H -> 2^31-1)"
+            if ([string]::IsNullOrWhiteSpace($participant.StakeIndex)) {
+                $participant.StakeIndex = "0"
+            }
+        }
+
+                # Get stake index if not already set
+        if (-not $participant.StakeIndex) {
+            $participant.StakeIndex = Read-Host (Get-Text "enterStakeAccountIndex")
+            if ([string]::IsNullOrWhiteSpace($participant.StakeIndex)) {
+                $participant.StakeIndex = "0"  # Default to 0 if empty
+            }
+        }
+
+        # Derive payment key (1854H shared path with stake path)
+        Write-Host ((Get-Text "derivingPayment") -f $participant.StakeIndex, $participant.PaymentIndex)
+        $payPath = "1854H/1815H/$($participant.StakeIndex)H/0/$($participant.PaymentIndex)"
         $payFile = Join-Path $script:keysDir "$name.pay.$($participant.PaymentIndex).xsk"
         $rootKeyContent = Get-Content $rootFile -Raw
         $payKey = $rootKeyContent | & $script:cardanoExe key child $payPath
