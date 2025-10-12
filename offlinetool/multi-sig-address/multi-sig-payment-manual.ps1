@@ -458,7 +458,7 @@ function Step-SetupParticipants {
         }
         
         # Choose mnemonic method
-        Write-Host ((Get-Text "chooseMnemonicMethod") -f $name)
+        Write-Host "`n$((Get-Text "chooseMnemonicMethod") -f $name)"
         Write-Host (Get-Text "mnemonicGenerate")
         Write-Host (Get-Text "mnemonicManual")
         Write-Host (Get-Text "mnemonicFile")
@@ -467,6 +467,17 @@ function Step-SetupParticipants {
         if ([string]::IsNullOrWhiteSpace($method)) { $method = "G" }
         
         $phraseFile = Join-Path $script:keysDir "$name.phrase"
+        
+        $participant = [PSCustomObject]@{
+            Index = $i
+            Name = $name
+            StakeIndex = $null
+            PaymentIndex = $null
+            PhraseFile = $null
+            KeyHash = $null
+            XvkFile = $null
+            PaymentAddr = $null
+        }
         
         switch ($method.Trim().ToUpper()) {
             'M' {
@@ -516,68 +527,58 @@ function Step-DeriveKeys {
     
     $script:keyHashes = @()
     
+   
     foreach ($participant in $script:participants) {
         $name = $participant.Name
-        Write-Host "`n$("-" * 50)"
-        Write-Host "Processing participant: $name"
+        Write-Host ("`n" + ((Get-Text "derivingKeys") -f $name)) -ForegroundColor Yellow
+        
+        # Choose method for index input
         Write-Host (Get-Text "chooseIndexMethod")
         Write-Host (Get-Text "indexMethodManual")
         Write-Host (Get-Text "indexMethodFile")
         Write-Host (Get-Text "indexMethodInput")
         
-        $methodChoice = Read-Host (Get-Text "indexMethodChoice")
-        if ([string]::IsNullOrWhiteSpace($methodChoice)) { $methodChoice = "1" }
+        $choice = Read-Host (Get-Text "indexMethodChoice")
+        if ([string]::IsNullOrWhiteSpace($choice)) { $choice = "1" }
         
-        switch ($methodChoice) {
+        switch ($choice.Trim()) {
             "1" {
-                # Manual index input
-                $indexInput = Read-Host (Get-Text "enterPaymentIndex")
-                $participant.PaymentIndex = if ([string]::IsNullOrWhiteSpace($indexInput)) { "0" } else { $indexInput }
-            }
-            "2" {
-                # Load from saved address file
-                $addressFile = Read-Host (Get-Text "enterAddressFile")
-                
-                # Resolve relative path if needed
-                if (-not [System.IO.Path]::IsPathRooted($addressFile)) {
-                    $addressFile = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($PWD.Path, $addressFile))
+                # Manual index input for both stake and payment
+                $participant.StakeIndex = Read-Host "Nhập account index  (0-2147483647) [mặc định: 0]"
+                if ([string]::IsNullOrWhiteSpace($participant.StakeIndex)) {
+                    $participant.StakeIndex = "0"
                 }
                 
-                if (Test-Path $addressFile) {
-                    Write-Host "Đang đọc file: $addressFile"
-                    try {
-                        $addressContent = Get-Content $addressFile -Raw -ErrorAction Stop
-                        $participant.Value = $addressContent.Trim()
-                        Write-Host "Đã đọc nội dung file thành công" -ForegroundColor Green
-                        $participant.PaymentIndex = "0"  # Default index since we're using the actual value
-                    } catch {
-                        Write-Host "Lỗi khi đọc file: $_" -ForegroundColor Red
-                        Write-Host "Sử dụng index mặc định 0" -ForegroundColor Yellow
-                        $participant.PaymentIndex = "0"
-                    }
-                } else {
-                    Write-Host "Không tìm thấy file: $addressFile" -ForegroundColor Red
-                    Write-Host "Đường dẫn đầy đủ đã thử: $([System.IO.Path]::GetFullPath($addressFile))" -ForegroundColor Yellow
-                    Write-Host "Sử dụng index mặc định 0" -ForegroundColor Yellow
+                $participant.PaymentIndex = Read-Host "Nhập payment  index (0-2147483647) [mặc định: 0]"
+                if ([string]::IsNullOrWhiteSpace($participant.PaymentIndex)) {
                     $participant.PaymentIndex = "0"
+                }
+            }
+            "2" {
+                # Load from address file
+                $addressFile = Read-Host (Get-Text "enterAddressFile")
+                if (Test-Path $addressFile) {
+                    # Set default values
+                    $participant.StakeIndex = "0"
+                    $participant.PaymentIndex = "0"
+                } else {
+                    Write-Error ((Get-Text "fileNotFound") -f $addressFile)
+                    return $false
                 }
             }
             "3" {
                 # Manual address input
                 $participant.Value = Read-Host (Get-Text "enterAddress")
-                # When entering address manually, use default index
+                # Default values for manual input
+                $participant.StakeIndex = "0"
                 $participant.PaymentIndex = "0"
             }
             default {
-                Write-Host "Invalid choice. Using default index 0"
+                Write-Host "Lựa chọn không hợp lệ. Sử dụng giá trị mặc định." -ForegroundColor Yellow
+                $participant.StakeIndex = "0"
                 $participant.PaymentIndex = "0"
             }
         }
-    }
-    
-    foreach ($participant in $script:participants) {
-        $name = $participant.Name
-        Write-Host ("`n" + ((Get-Text "derivingKeys") -f $name)) -ForegroundColor Yellow
         
         # Derive root key
         Write-Host (Get-Text "derivingRoot")
@@ -590,22 +591,6 @@ function Step-DeriveKeys {
         }
         Set-Content -Path $rootFile -Value $rootKey -NoNewline -Encoding ASCII
         
-        # Get stake index if not already set
-        if (-not $participant.StakeIndex) {
-            $participant.StakeIndex = Read-Host "Enter stake account index for $($participant.Name) (0H -> 2^31-1)"
-            if ([string]::IsNullOrWhiteSpace($participant.StakeIndex)) {
-                $participant.StakeIndex = "0"
-            }
-        }
-
-                # Get stake index if not already set
-        if (-not $participant.StakeIndex) {
-            $participant.StakeIndex = Read-Host (Get-Text "enterStakeAccountIndex")
-            if ([string]::IsNullOrWhiteSpace($participant.StakeIndex)) {
-                $participant.StakeIndex = "0"  # Default to 0 if empty
-            }
-        }
-
         # Derive payment key (1854H shared path with stake path)
         Write-Host ((Get-Text "derivingPayment") -f $participant.StakeIndex, $participant.PaymentIndex)
         $payPath = "1854H/1815H/$($participant.StakeIndex)H/0/$($participant.PaymentIndex)"
@@ -879,21 +864,21 @@ function Show-CompletionSummary {
     Write-Host ("╚" + "═"*64 + "╝")
     Write-Host "`nCác file đã tạo trong thư mục keys/:`n"
     
-    # Display participant 1 info
-    Write-Host "Người tham gia 1 (1):"
-    Write-Host "  📄 1.phrase     - Mnemonic phrase"
-    Write-Host "  🔐 1.root.xsk   - Root private key"
-    Write-Host "  🔐 1.pay.xsk    - Payment private key"
-    Write-Host "  🔓 1.pay.xvk    - Payment public key"
-    Write-Host "  🔑 1.hash       - Key hash`n"
-    
-    # Display participant 2 info
-    Write-Host "Người tham gia 2 (2):"
-    Write-Host "  📄 2.phrase     - Mnemonic phrase"
-    Write-Host "  🔐 2.root.xsk   - Root private key"
-    Write-Host "  🔐 2.pay.xsk    - Payment private key"
-    Write-Host "  🔓 2.pay.xvk    - Payment public key"
-    Write-Host "  🔑 2.hash       - Key hash`n"
+    # Display info for each participant
+    foreach ($p in $script:participants) {
+        Write-Host "Người tham gia $($p.Index) ($($p.Name)):"
+        Write-Host "  📄 $($p.Name).phrase                    - Mnemonic phrase"
+        Write-Host "  🔐 $($p.Name).root.xsk                  - Root private key"
+        Write-Host "  🔐 $($p.Name).pay.$($p.StakeIndex)_$($p.PaymentIndex).xsk   - Payment private key"
+        Write-Host "  🔓 $($p.Name).pay.$($p.StakeIndex)_$($p.PaymentIndex).xvk   - Payment public key"
+        Write-Host "  🔑 $($p.Name).hash                      - Key hash"
+        Write-Host "  �️  Derivation path: 1854H/1815H/$($p.StakeIndex)H/0/$($p.PaymentIndex)" -ForegroundColor Yellow
+        if ($p.PaymentAddr) {
+            Write-Host "  � $($p.Name).payment.$($p.StakeIndex)_$($p.PaymentIndex).addr - Individual payment address"
+            Write-Host "      $($p.PaymentAddr)" -ForegroundColor Cyan
+        }
+        Write-Host ""
+    }
     
     # Display multisig files
     Write-Host "File Multisig Policy:"
