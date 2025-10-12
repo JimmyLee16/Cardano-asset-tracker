@@ -107,7 +107,14 @@ $script:strings = @{
         
         # Step 3: Derive Keys
         step3Title = "STEP 3: Derive Keys for All Participants"
+        chooseIndexMethod = "Choose payment index method:"
+        indexMethodManual = "  [1] Enter index manually (default)"
+        indexMethodFile = "  [2] Load from saved address file"
+        indexMethodInput = "  [3] Input address manually"
+        indexMethodChoice = "Enter choice (1/2/3)"
         enterPaymentIndex = "Enter payment key index (0-2147483647) [default: 0]"
+        enterAddressFile = "Enter path to saved address file"
+        enterAddress = "Enter address manually"
         derivingKeys = "Deriving keys for participant: {0}"
         derivingRoot = "  → Deriving root key..."
         derivingPayment = "  → Deriving payment key (1854H/1815H/0H/0/{0})..."
@@ -244,7 +251,14 @@ $script:strings = @{
         
         # Step 3: Derive Keys
         step3Title = "BƯỚC 3: Tạo Key Cho Tất Cả Người Tham Gia"
+        chooseIndexMethod = "Chọn phương thức nhập payment index:"
+        indexMethodManual = "  [1] Nhập index thủ công (mặc định)"
+        indexMethodFile = "  [2] Tải từ file địa chỉ có sẵn"
+        indexMethodInput = "  [3] Nhập địa chỉ thủ công"
+        indexMethodChoice = "Nhập lựa chọn (1/2/3)"
         enterPaymentIndex = "Nhập payment key index (0-2147483647) [mặc định: 0]"
+        enterAddressFile = "Nhập đường dẫn đến file địa chỉ"
+        enterAddress = "Nhập địa chỉ thủ công"
         derivingKeys = "Đang tạo key cho người tham gia: {0}"
         derivingRoot = "  → Đang tạo root key..."
         derivingPayment = "  → Đang tạo payment key (1854H/1815H/0H/0/{0})..."
@@ -498,11 +512,66 @@ function Step-SetupParticipants {
 function Step-DeriveKeys {
     Write-Host ("`n=== " + (Get-Text "step3Title") + " ===") -ForegroundColor Cyan
     
-    # Get payment index
-    $indexInput = Read-Host (Get-Text "enterPaymentIndex")
-    $script:paymentIndex = if ([string]::IsNullOrWhiteSpace($indexInput)) { "0" } else { $indexInput }
-    
     $script:keyHashes = @()
+    
+    foreach ($participant in $script:participants) {
+        $name = $participant.Name
+        Write-Host "`n$("-" * 50)"
+        Write-Host "Processing participant: $name"
+        Write-Host (Get-Text "chooseIndexMethod")
+        Write-Host (Get-Text "indexMethodManual")
+        Write-Host (Get-Text "indexMethodFile")
+        Write-Host (Get-Text "indexMethodInput")
+        
+        $methodChoice = Read-Host (Get-Text "indexMethodChoice")
+        if ([string]::IsNullOrWhiteSpace($methodChoice)) { $methodChoice = "1" }
+        
+        switch ($methodChoice) {
+            "1" {
+                # Manual index input
+                $indexInput = Read-Host (Get-Text "enterPaymentIndex")
+                $participant.PaymentIndex = if ([string]::IsNullOrWhiteSpace($indexInput)) { "0" } else { $indexInput }
+            }
+            "2" {
+                # Load from saved address file
+                $addressFile = Read-Host (Get-Text "enterAddressFile")
+                
+                # Resolve relative path if needed
+                if (-not [System.IO.Path]::IsPathRooted($addressFile)) {
+                    $addressFile = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($PWD.Path, $addressFile))
+                }
+                
+                if (Test-Path $addressFile) {
+                    Write-Host "Đang đọc file: $addressFile"
+                    try {
+                        $addressContent = Get-Content $addressFile -Raw -ErrorAction Stop
+                        $participant.Value = $addressContent.Trim()
+                        Write-Host "Đã đọc nội dung file thành công" -ForegroundColor Green
+                        $participant.PaymentIndex = "0"  # Default index since we're using the actual value
+                    } catch {
+                        Write-Host "Lỗi khi đọc file: $_" -ForegroundColor Red
+                        Write-Host "Sử dụng index mặc định 0" -ForegroundColor Yellow
+                        $participant.PaymentIndex = "0"
+                    }
+                } else {
+                    Write-Host "Không tìm thấy file: $addressFile" -ForegroundColor Red
+                    Write-Host "Đường dẫn đầy đủ đã thử: $([System.IO.Path]::GetFullPath($addressFile))" -ForegroundColor Yellow
+                    Write-Host "Sử dụng index mặc định 0" -ForegroundColor Yellow
+                    $participant.PaymentIndex = "0"
+                }
+            }
+            "3" {
+                # Manual address input
+                $participant.Value = Read-Host (Get-Text "enterAddress")
+                # When entering address manually, use default index
+                $participant.PaymentIndex = "0"
+            }
+            default {
+                Write-Host "Invalid choice. Using default index 0"
+                $participant.PaymentIndex = "0"
+            }
+        }
+    }
     
     foreach ($participant in $script:participants) {
         $name = $participant.Name
@@ -520,9 +589,9 @@ function Step-DeriveKeys {
         Set-Content -Path $rootFile -Value $rootKey -NoNewline -Encoding ASCII
         
         # Derive payment key (1854H shared path)
-        Write-Host ((Get-Text "derivingPayment") -f $script:paymentIndex)
-        $payPath = "1854H/1815H/0H/0/$($script:paymentIndex)"
-        $payFile = Join-Path $script:keysDir "$name.pay.$($script:paymentIndex).xsk"
+        Write-Host ((Get-Text "derivingPayment") -f $participant.PaymentIndex)
+        $payPath = "1854H/1815H/0H/0/$($participant.PaymentIndex)"
+        $payFile = Join-Path $script:keysDir "$name.pay.$($participant.PaymentIndex).xsk"
         $rootKeyContent = Get-Content $rootFile -Raw
         $payKey = $rootKeyContent | & $script:cardanoExe key child $payPath
         if ($LASTEXITCODE -ne 0) {
@@ -632,23 +701,39 @@ function Step-ConfigurePolicy {
         Write-Host (Get-Text "noTimeConstraints") -ForegroundColor Green
     }
     
-    # Build policy expression
-    $sigParts = $script:keyHashes | ForEach-Object { "sig $_" }
-    $sigList = $sigParts -join ", "
-    $atLeastExpr = "at_least $($script:threshold) [ $sigList ]"
+    # Build policy JSON expression
+    $signaturesJson = $script:keyHashes | ForEach-Object {
+        @{
+            "signature" = @{
+                "verification_key" = $_
+            }
+        }
+    }
+
+    $atLeastJson = @{
+        "at_least" = @{
+            "required" = $script:threshold
+            "signatures" = $signaturesJson
+        }
+    }
     
     if ($null -ne $script:activeFrom -or $null -ne $script:activeUntil) {
-        $innerParts = @()
-        $innerParts += $atLeastExpr
-        if ($null -ne $script:activeFrom) { 
-            $innerParts += "active_from $($script:activeFrom)" 
+        $timeConstraints = @{}
+        if ($null -ne $script:activeFrom) {
+            $timeConstraints["active_from"] = @{ "slot" = $script:activeFrom }
         }
-        if ($null -ne $script:activeUntil) { 
-            $innerParts += "active_until $($script:activeUntil)" 
+        if ($null -ne $script:activeUntil) {
+            $timeConstraints["active_until"] = @{ "slot" = $script:activeUntil }
         }
-        $script:policyExpr = "all [ " + ($innerParts -join ", ") + " ]"
+        
+        $script:policyExpr = @{
+            "all" = @(
+                $atLeastJson
+                $timeConstraints
+            )
+        } | ConvertTo-Json -Depth 10 -Compress
     } else {
-        $script:policyExpr = $atLeastExpr
+        $script:policyExpr = $atLeastJson | ConvertTo-Json -Depth 10 -Compress
     }
     
     Write-Host ("`n" + (Get-Text "policyExpression")) -ForegroundColor Yellow
@@ -661,9 +746,33 @@ function Step-ConfigurePolicy {
 function Step-GenerateAddress {
     Write-Host ("`n=== " + (Get-Text "step5Title") + " ===") -ForegroundColor Cyan
     
-    # Generate policy ID
+    # Build simple script command
     Write-Host (Get-Text "generatingPolicy")
-    $script:policyId = & $script:cardanoExe address policy --script $script:policyExpr
+    
+    # Get all verification keys and combine them
+    $keyList = $script:participants | ForEach-Object {
+        Get-Content $_.XvkFile -Raw
+    } | ForEach-Object { $_.Trim() }
+    
+    # Build the script command
+    $scriptParts = $keyList
+    
+    # Add time constraints if specified
+    if ($null -ne $script:activeFrom) {
+        $scriptParts += "active_from $($script:activeFrom)"
+    }
+    if ($null -ne $script:activeUntil) {
+        $scriptParts += "active_until $($script:activeUntil)"
+    }
+    
+    # Build final command
+    $finalCmd = "all [" + ($scriptParts -join ", ") + "]"
+    
+    # Save for reference
+    $script:policyExpr = $finalCmd
+    
+    # Generate policy ID using simple script
+    $script:policyId = & $script:cardanoExe script hash $finalCmd
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Failed to generate policy ID"
         return $false
@@ -671,9 +780,12 @@ function Step-GenerateAddress {
     $script:policyId = $script:policyId.Trim()
     Write-Host ((Get-Text "policyId") -f $script:policyId) -ForegroundColor Cyan
     
-    # Generate multisig address
+    # Save policy ID to script.hash file
+    $script:policyId | Out-File -FilePath "script.hash" -NoNewline
+    
+    # Generate multisig address using simple script
     Write-Host (Get-Text "generatingAddress")
-    $script:multisigAddr = & $script:cardanoExe address payment --network-tag $script:networkTag --script $script:policyExpr
+    $script:multisigAddr = Get-Content "script.hash" | & $script:cardanoExe address payment --network-tag $script:networkTag
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Failed to generate multisig address"
         return $false
@@ -683,16 +795,58 @@ function Step-GenerateAddress {
     
     # Save files
     Write-Host (Get-Text "savingFiles")
-    $policyFile = Join-Path $script:keysDir "policy.txt"
-    $policyIdFile = Join-Path $script:keysDir "policy_id.txt"
+    $policyFile = Join-Path $script:keysDir "policy.json"
     $addrFile = Join-Path $script:keysDir "multisig.addr"
     
     Set-Content -Path $policyFile -Value $script:policyExpr -Encoding UTF8
-    Set-Content -Path $policyIdFile -Value $script:policyId -Encoding UTF8
     Set-Content -Path $addrFile -Value $script:multisigAddr -Encoding UTF8
     
     Write-Host ("`n" + (Get-Text "addressGenerated")) -ForegroundColor Green
+
+    # Display final summary
+    Show-CompletionSummary
     return $true
+}
+
+function Show-CompletionSummary {
+    Write-Host "`n"
+    Write-Host ("╔" + "═"*64 + "╗")
+    Write-Host ("║  " + "HOÀN THÀNH TẠO MULTISIG ADDRESS".PadRight(62) + "║")
+    Write-Host ("╚" + "═"*64 + "╝")
+    Write-Host "`nCác file đã tạo trong thư mục keys/:`n"
+    
+    # Display participant 1 info
+    Write-Host "Người tham gia 1 (1):"
+    Write-Host "  📄 1.phrase     - Mnemonic phrase"
+    Write-Host "  🔐 1.root.xsk   - Root private key"
+    Write-Host "  🔐 1.pay.xsk    - Payment private key"
+    Write-Host "  🔓 1.pay.xvk    - Payment public key"
+    Write-Host "  🔑 1.hash       - Key hash`n"
+    
+    # Display participant 2 info
+    Write-Host "Người tham gia 2 (2):"
+    Write-Host "  📄 2.phrase     - Mnemonic phrase"
+    Write-Host "  🔐 2.root.xsk   - Root private key"
+    Write-Host "  🔐 2.pay.xsk    - Payment private key"
+    Write-Host "  🔓 2.pay.xvk    - Payment public key"
+    Write-Host "  🔑 2.hash       - Key hash`n"
+    
+    # Display multisig files
+    Write-Host "File Multisig Policy:"
+    Write-Host "  📜 policy.txt         - Biểu thức policy"
+    Write-Host "  🆔 policy_id.txt      - Policy ID"
+    Write-Host "  ⭐ multisig.addr      - Multisig payment address (dùng cái này!)`n"
+    
+    # Display security warnings
+    Write-Host "⚠️  LƯU Ý BẢO MẬT:"
+    Write-Host "  • Các file .xsk chứa private keys - TUYỆT ĐỐI KHÔNG chia sẻ"
+    Write-Host "  • Mỗi người tham gia chỉ nên giữ key của mình"
+    Write-Host "  • Cần tối thiểu 2 người tham gia ký giao dịch"
+    Write-Host "  • Tất cả người tham gia cần private keys để ký"
+    Write-Host "  • Xóa các file tạm sau khi chuyển vào lưu trữ an toàn`n"
+    
+    Write-Host "✓ Dùng multisig.addr để nhận ADA (cần 2-trong-2 chữ ký để chi tiêu)"
+    Write-Host "✓ Mỗi người có thể dùng .payment.addr để giao dịch cá nhân (1 chữ ký)`n"
 }
 
 # Main execution flow with navigation
