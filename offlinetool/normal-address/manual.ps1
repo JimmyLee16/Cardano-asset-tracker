@@ -262,6 +262,7 @@ $script:strings = @{
         
         # Step 5: Payment Key
         step5Title = "BƯỚC 5: Tạo Payment Key và Address"
+        enterStakeAccountIndex = "Nhập số index cho stake account (0 -> 2^31-1)"
         enterPayIndex = "Nhập số index cho payment key (0 -> 2^31-1)"
         derivingPayment = "Đang tạo payment private key (đường dẫn: {0})..."
         failedPaymentKey = "Không thể tạo addr.xsk"
@@ -513,8 +514,15 @@ function Step-CreateRootKey {
 function Step-DerivePaymentKey {
     Write-Host ("`n=== " + (Get-Text "step5Title") + " ===") -ForegroundColor Cyan
     
+    # Get stake index first
+    $script:stakeIndex = Read-Host (Get-Text "enterStakeAccountIndex")
+    if ([string]::IsNullOrWhiteSpace($script:stakeIndex)) {
+        $script:stakeIndex = "0"
+    }
+    
+    # Then get payment index
     $script:payIndex = Read-Host (Get-Text "enterPayIndex")
-    $payPath = "1852H/1815H/0H/0/$($script:payIndex)"
+    $payPath = "1852H/1815H/$($script:stakeIndex)H/0/$($script:payIndex)"
     
     Write-Host ((Get-Text "derivingPayment") -f $payPath)
     Get-Content .\root.xsk -Raw | & $script:cardanoExe key child $payPath > .\addr.xsk
