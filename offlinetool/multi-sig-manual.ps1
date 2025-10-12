@@ -23,8 +23,8 @@ try {
 
 # Language selection
 Write-Host "╔════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║      Cardano Multisig Address Generator - Language Selection      ║" -ForegroundColor Cyan
-Write-Host "║      Tạo Địa Chỉ Multisig Cardano - Chọn Ngôn Ngữ                 ║" -ForegroundColor Cyan
+Write-Host "║      Cardano Multisig Address Generator - Language Selection       ║" -ForegroundColor Cyan
+Write-Host "║      Tạo Địa Chỉ Multisig Cardano - Chọn Ngôn Ngữ                  ║" -ForegroundColor Cyan
 Write-Host "╚════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Select your language / Chọn ngôn ngữ:"
