@@ -653,6 +653,52 @@ function Step-DeriveKeys {
     return $true
 }
 
+function Convert-UnixTimeToUTC {
+    param (
+        [Parameter(Mandatory=$true)]
+        [int64]$UnixTime
+    )
+    try {
+        $epoch = [DateTime]::new(1970, 1, 1, 0, 0, 0, [DateTimeKind]::Utc)
+        return $epoch.AddSeconds($UnixTime).ToString("yyyy-MM-dd HH:mm:ss UTC")
+    } catch {
+        return "Invalid timestamp"
+    }
+}
+
+function Show-PolicyInfo {
+    param (
+        [int]$RequiredSigners,
+        [int]$TotalParticipants,
+        [int64]$ActiveFrom,
+        [int64]$ActiveUntil
+    )
+    
+    $border = "=" * 70
+    Write-Host "`n$border"
+    Write-Host "THÔNG TIN CHÍNH SÁCH MULTISIG" -ForegroundColor Cyan
+    Write-Host $border
+    
+    Write-Host "Số người tham gia: " -NoNewline
+    Write-Host $TotalParticipants -ForegroundColor Yellow
+    
+    Write-Host "Số chữ ký cần thiết: " -NoNewline
+    Write-Host $RequiredSigners -ForegroundColor Yellow
+    
+    Write-Host "`nThời gian có hiệu lực:"
+    Write-Host "  • Từ: " -NoNewline
+    Write-Host (Convert-UnixTimeToUTC $ActiveFrom) -ForegroundColor Green
+    Write-Host "  • Đến: " -NoNewline
+    Write-Host (Convert-UnixTimeToUTC $ActiveUntil) -ForegroundColor Green
+    
+    # Additional security notes
+    Write-Host "`nLƯU Ý QUAN TRỌNG:" -ForegroundColor Yellow
+    Write-Host "• Cần $RequiredSigners/$TotalParticipants chữ ký để thực hiện giao dịch"
+    Write-Host "• Chính sách chỉ có hiệu lực trong khoảng thời gian đã định"
+    Write-Host "• Các giao dịch ngoài thời gian này sẽ bị từ chối"
+    Write-Host $border
+}
+
 function Step-ConfigurePolicy {
     Write-Host ("`n=== " + (Get-Text "step4Title") + " ===") -ForegroundColor Cyan
     
