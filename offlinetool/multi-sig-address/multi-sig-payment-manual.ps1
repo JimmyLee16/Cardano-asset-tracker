@@ -512,16 +512,14 @@ function Step-SetupParticipants {
             }
         }
         
-        $script:participants += @{
-            Name = $name
-            PhraseFile = $phraseFile
-        }
+        # Gán PhraseFile và thêm participant object vào danh sách
+        $participant.PhraseFile = $phraseFile
+        $script:participants += $participant
     }
     
     Write-Host ("`n" + ((Get-Text "participantsCreated") -f $script:participantCount)) -ForegroundColor Green
     return $true
 }
-
 function Step-DeriveKeys {
     Write-Host ("`n=== " + (Get-Text "step3Title") + " ===") -ForegroundColor Cyan
     
@@ -658,14 +656,24 @@ function Step-DeriveKeys {
 
 function Convert-UnixTimeToUTC {
     param (
-        [Parameter(Mandatory=$true)]
-        [int64]$UnixTime
+        [Parameter(Mandatory = $true)]
+        [double]$Seconds,
+        [switch]$UTC  # nếu có flag này thì trả về UTC, mặc định là giờ Việt Nam
     )
-    try {
-        $epoch = [DateTime]::new(1970, 1, 1, 0, 0, 0, [DateTimeKind]::Utc)
-        return $epoch.AddSeconds($UnixTime).ToString("yyyy-MM-dd HH:mm:ss UTC")
-    } catch {
-        return "Invalid timestamp"
+
+    # Mốc thời gian Shelley slot 0 (UTC)
+    $baseTime = [datetime]"2020-05-31T21:46:51Z"
+
+    # Cộng thêm số giây vào mốc gốc
+    $resultTime = $baseTime.AddSeconds($Seconds)
+
+    if ($UTC) {
+        # Xuất dạng UTC
+        return $resultTime.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")
+    } else {
+        # Quy đổi sang giờ Việt Nam (+7)
+        $vnTime = $resultTime.ToUniversalTime().AddHours(7)
+        return $vnTime.ToString("yyyy-MM-dd HH:mm:ss 'VN'")
     }
 }
 
@@ -789,6 +797,14 @@ function Step-ConfigurePolicy {
     Write-Host $script:policyExpr -ForegroundColor Cyan
     
     Write-Host ("`n" + (Get-Text "policyConfigured")) -ForegroundColor Green
+    # Show policy summary information immediately after configuring the policy
+    if (-not $script:threshold) { $script:threshold = 0 }
+    if (-not $script:participantCount) { $script:participantCount = 0 }
+    if (-not $script:activeFrom) { $script:activeFrom = 0 }
+    if (-not $script:activeUntil) { $script:activeUntil = 0 }
+
+    Show-PolicyInfo -RequiredSigners $script:threshold -TotalParticipants $script:participantCount -ActiveFrom $script:activeFrom -ActiveUntil $script:activeUntil
+
     return $true
 }
 
