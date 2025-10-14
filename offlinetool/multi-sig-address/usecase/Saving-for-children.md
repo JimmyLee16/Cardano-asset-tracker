@@ -1,4 +1,4 @@
-# 👨‍👩‍👧‍👦 Family Savings Plan - Native Script Guide
+# 👨‍👩‍👧‍👦 Family Savings Plan - Multig-address Guide
 
 ## 📋 Table of Contents
 1. [Overview](#overview)
