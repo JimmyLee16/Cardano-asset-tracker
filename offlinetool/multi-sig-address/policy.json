@@ -1,2 +1,44 @@
-{"all":[{"at_least":{"signatures":[{"signature":{"verification_key":"addr_shared_vkh15vks3y4cdnpargucel6hwgdv5v9kqsf3k6nva2k805n66jsjnl6"}},{"signature":{"verification_key":"addr_shared_vkh1k92s6wr5nfgv07f6xg4qwdl0q3smcy29ww975mmudv54g7lt0z6"}},{"signature":{"verification_key":"addr_shared_vkh1983h4c8vlsnafxqynahwzvc7qw5dwxp84ndzyrkv2d4kcknatz3"}},{"signature":{"verification_key":"addr_shared_vkh1gucrd9lhw62wufdtzqldjmtwvzlg50z6cdtfc4w3trr4y4e002j"}},{"signature":{"verification_key":"addr_shared_vkh1y5wqq7gemm0sxcxaq3c8g3g584edat40wuhmruepqvwy23qzuyh"}}],"required":3}},{"active_from":{"slot":182732198},"active_until":{"slot":198902831}}]}
-
+{
+  "all": [
+    {
+      "at_least": {
+        "signatures": [
+          {
+            "signature": {
+              "verification_key": "addr_shared_vkh15vks3y4cdnpargucel6hwgdv5v9kqsf3k6nva2k805n66jsjnl6"
+            }
+          },
+          {
+            "signature": {
+              "verification_key": "addr_shared_vkh1k92s6wr5nfgv07f6xg4qwdl0q3smcy29ww975mmudv54g7lt0z6"
+            }
+          },
+          {
+            "signature": {
+              "verification_key": "addr_shared_vkh1983h4c8vlsnafxqynahwzvc7qw5dwxp84ndzyrkv2d4kcknatz3"
+            }
+          },
+          {
+            "signature": {
+              "verification_key": "addr_shared_vkh1gucrd9lhw62wufdtzqldjmtwvzlg50z6cdtfc4w3trr4y4e002j"
+            }
+          },
+          {
+            "signature": {
+              "verification_key": "addr_shared_vkh1y5wqq7gemm0sxcxaq3c8g3g584edat40wuhmruepqvwy23qzuyh"
+            }
+          }
+        ],
+        "required": 3
+      }
+    },
+    {
+      "active_from": {
+        "slot": 182732198
+      },
+      "active_until": {
+        "slot": 198902831
+      }
+    }
+  ]
+}
