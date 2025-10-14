@@ -108,9 +108,11 @@ This Native Script implements a **family savings governance model** for managing
 ```
 
 
+
 ## 🔄 Flow Diagram
 
-```
+```<img width="8343" height="2442" alt="Untitled diagram-2025-10-14-060928" src="https://github.com/user-attachments/assets/5649eb40-65d3-4a7c-bb8c-3507423d67bb" />
+
 START: Family Savings Account
   │
   ├─► SCENARIO 1: Major Decisions (>50K ADA)
