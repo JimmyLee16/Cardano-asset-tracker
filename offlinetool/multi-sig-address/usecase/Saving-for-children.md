@@ -75,6 +75,7 @@ This Native Script implements a **family savings governance model** for managing
 
 ## Architecture
 
+```text
                                     ┌─────────────────────────────────────────────┐
                                     │         🏦 FAMILY SAVINGS ACCOUNT           │
                                     │        (Choose 1 of 5 main scenarios)       │
