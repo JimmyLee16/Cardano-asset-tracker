@@ -16,7 +16,7 @@ These tools allow you to:
 
 - ⚡ **Fast** — run scripts directly from your local machine.  
 - 🧩 **Simple** — minimal setup required.  
-- 🔒 **Offline** — no network connection needed; your wallet data stays local.  
+- 🔒 **Privacy** — process local.  
 
 ---
 
