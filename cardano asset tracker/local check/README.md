@@ -7,8 +7,8 @@ This repository provides **a collection of scripts** to **check the balance of a
 ## ⚙️ Overview  
 
 These tools allow you to:
-- Quickly check your wallet balances **without connecting to any explorer or wallet app**.  
-- Operate fully **offline**, ensuring privacy and speed.  
+- Quickly check your wallet balances **without connecting to any blockchain explorer web or wallet app**.  
+- Operate fully **local**, ensuring privacy and speed.  
 
 ---
 
