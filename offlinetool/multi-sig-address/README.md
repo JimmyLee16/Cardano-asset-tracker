@@ -91,7 +91,7 @@ Chuẩn bị
 3. Giải nén và copy file `cardano-address.exe` vào bất kỳ thư mục nào bạn muốn
 4. Copy cả hai script multi-sig vào cùng thư mục
 
-Cách chạy
+Cách thực hiện
 ---------
 1. Mở PowerShell (Run as Administrator để tránh lỗi policy)
 2. Nếu gặp lỗi "running scripts is disabled", bật quyền chạy script:
