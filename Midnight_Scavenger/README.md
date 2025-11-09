@@ -8,7 +8,7 @@ Hỗ trợ nhập danh sách địa chỉ theo 2 cách — thủ công hoặc t�
 
 ## 📦 Chuẩn bị
 
-1. Tải về **2 file** (ví dụ: `check_addresses.ps1` và `run_check.bat`).  
+1. Tải về **2 file** Checksolution_gui(vie).ps1 và checker.bat ( bạn có thể tự đặt tên khác nhưng lưu ý phải đổi tên file .ps1 lại trong file .bat ví dụ: `check_addresses.ps1` và `run_check.bat`).  
 2. Đặt cả 2 file vào **cùng một thư mục**.
 
 ---
