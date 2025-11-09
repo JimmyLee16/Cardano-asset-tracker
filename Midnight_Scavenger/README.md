@@ -63,6 +63,7 @@ Copy code
 **PowerShell (chạy script trực tiếp):**
 ```powershell
 # Mở PowerShell → chuyển đến thư mục chứa file → chạy:
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass 
 ./check_addresses.ps1
 CMD (dùng .bat):
 
