@@ -75,15 +75,15 @@ run_check.bat
 
 ## **⚖️ Disclaimer / Miễn trừ trách nhiệm**
 
-Tool này được cung cấp miễn phí và chỉ nhằm mục đích học tập & kiểm thử API.
+- Tool này được cung cấp miễn phí và chỉ nhằm mục đích học tập & kiểm thử API.
+- Tác giả không chịu trách nhiệm cho mọi thiệt hại, mất mát dữ liệu, hoặc hành vi sử dụng sai mục đích.
+- Người dùng phải tự chịu trách nhiệm khi chạy script trên hệ thống của mình.
+- Không có bảo đảm nào về độ chính xác, tính ổn định, hoặc tính liên tục của dịch vụ API Midnight được sử dụng trong công cụ này.
+- Việc sử dụng tool đồng nghĩa bạn đồng ý với các điều khoản miễn trừ trách nhiệm nêu trên.
 
-Tác giả không chịu trách nhiệm cho mọi thiệt hại, mất mát dữ liệu, hoặc hành vi sử dụng sai mục đích.
-
-Người dùng phải tự chịu trách nhiệm khi chạy script trên hệ thống của mình.
-
-Không có bảo đảm nào về độ chính xác, tính ổn định, hoặc tính liên tục của dịch vụ API Midnight được sử dụng trong công cụ này.
-
-Việc sử dụng tool đồng nghĩa bạn đồng ý với các điều khoản miễn trừ trách nhiệm nêu trên.
+  ## ** Liên hệ
+  - Cardano ADA Việt Nam telegram group https://t.me/ADA_VIET
+  - Tool được tạo bới VCC pool vì mục đích cộng đồng
 
 📜 License
 MIT License © 2025
