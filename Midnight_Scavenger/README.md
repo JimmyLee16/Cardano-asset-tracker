@@ -71,6 +71,7 @@ cmd
 Copy code
 cd C:\path\to\folder
 run_check.bat
+```
 
 ## **⚖️ Disclaimer / Miễn trừ trách nhiệm**
 
