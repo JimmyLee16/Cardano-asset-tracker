@@ -1,7 +1,8 @@
 ## 🧰 Midnight-Scavenger Address Checker
 
-Một công cụ nhỏ giúp kiểm tra danh sách địa chỉ ví thông qua API của **Midnight**.  
+- Công cụ nhỏ giúp kiểm tra danh sách địa chỉ ví thông qua API của **Midnight**.  
 Hỗ trợ nhập danh sách địa chỉ theo 2 cách — thủ công hoặc từ file `.csv`.
+- Tool được tạo bới VCC pool vì mục đích cộng đồng
 
 ---
 
@@ -83,7 +84,7 @@ run_check.bat
 
   ## ** Liên hệ
   - Cardano ADA Việt Nam telegram group https://t.me/ADA_VIET
-  - Tool được tạo bới VCC pool vì mục đích cộng đồng
+
 
 📜 License
 MIT License © 2025
