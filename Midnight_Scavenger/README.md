@@ -1,55 +1,74 @@
-🧰 Midnight Address Checker
+# 🧰 Midnight Address Checker
 
-Một công cụ nhỏ giúp kiểm tra danh sách địa chỉ ví thông qua API của Midnight.
-Hỗ trợ nhập danh sách địa chỉ theo 2 cách — thủ công hoặc từ file .csv.
+Một công cụ nhỏ giúp kiểm tra danh sách địa chỉ ví thông qua API của **Midnight**.  
+Hỗ trợ nhập danh sách địa chỉ theo 2 cách — thủ công hoặc từ file `.csv`.
 
-📦 Chuẩn bị
+---
 
-Tải về 2 file (script .ps1 và .bat)
+## 📦 Chuẩn bị
 
-Đặt cả 2 file vào cùng một thư mục
+1. Tải về **2 file** (ví dụ: `check_addresses.ps1` và `run_check.bat`).  
+2. Đặt cả 2 file vào **cùng một thư mục**.
 
-⚙️ Cách sử dụng
-Cách 1: Dùng file CSV
+---
 
-Tạo file address_list.csv
+## ⚙️ Cách sử dụng
 
-Ở cột A, đặt header là Address
+CHẠY FILE .bat là vào tool
 
-Dán các địa chỉ ví cần kiểm tra vào dưới cột đó
-(mỗi dòng một địa chỉ)
+### Cách 1 — Dùng file CSV
+1. Tạo file `address_list.csv` trong cùng thư mục với 2 file script.  
+2. Nội dung file CSV **phải** có header `Address` ở cột A, các dòng sau là địa chỉ ví cần kiểm tra.
 
-Cách 2: Nhập địa chỉ thủ công
+**Ví dụ `address_list.csv`:**
+Address
+addr1q...
+addr1z...
+addr1xy...
 
-Chạy file .bat
+css
+Copy code
 
-Khi được yêu cầu, nhập từng địa chỉ ví cần kiểm tra trực tiếp trong cửa sổ CMD
+### Cách 2 — Nhập địa chỉ thủ công
+- Chạy `run_check.bat` (hoặc chạy `check_addresses.ps1` trong PowerShell) — script sẽ yêu cầu nhập địa chỉ từng cái một trong cửa sổ CMD/PowerShell.
 
-🔄 Cơ chế hoạt động
+---
 
-Tool gọi API từ Midnight để kiểm tra thông tin địa chỉ
+## 🔄 Cơ chế hoạt động
 
-Hiện tại tool đang ở chế độ call API liên tục, nên nếu danh sách quá dài có thể dẫn đến lỗi tạm thời
+- Tool gọi **API của Midnight** để kiểm tra thông tin từng địa chỉ.
+- Hiện tại tool **gọi API liên tục** khi quét danh sách — với danh sách quá dài có thể gây lỗi do giới hạn API hoặc timeout.
+- **Chưa có** hệ thống log chi tiết cho các địa chỉ bị lỗi (sẽ cập nhật sau).
 
-Chưa hỗ trợ log lỗi cho các địa chỉ thất bại (tính năng này sẽ được bổ sung trong bản cập nhật tiếp theo)
+---
 
-⚠️ Lưu ý
+## ⚠️ Lưu ý an toàn & vận hành
 
-Vui lòng tự kiểm tra nội dung file .ps1 và .bat trước khi chạy
-→ Code chạy trực tiếp trong môi trường CMD/PowerShell, không có sandbox an toàn
+- **Kiểm tra thủ công** nội dung `check_addresses.ps1` và `run_check.bat` trước khi chạy — code chạy trực tiếp trong CMD/PowerShell.
+- Nếu bạn có **danh sách lớn**, hãy chia nhỏ CSV (ví dụ 50–100 địa chỉ mỗi file) để giảm rủi ro lỗi do rate-limit.
+- Không sử dụng công cụ cho mục đích trái pháp luật hoặc gây quá tải API.
 
-Không sử dụng tool này cho mục đích tấn công hoặc spam API
+---
 
-🧩 Roadmap
-Phiên bản	Tính năng	Trạng thái
-v1.0	Kiểm tra địa chỉ từ CSV / thủ công	✅
-v1.1	Ghi log địa chỉ lỗi	🕓 Planned
-v1.2	Giới hạn tần suất API / Delay tự động	🕓 Planned
-🧠 Gợi ý
+## 🧩 Roadmap (dự kiến)
 
-Nếu bạn kiểm tra danh sách rất dài, hãy chia nhỏ CSV thành nhiều phần (mỗi file 50–100 địa chỉ) để tránh lỗi từ API Midnight.
+- v1.0 — Đọc từ CSV / nhập tay — **Hoàn thành**  
+- v1.1 — Thêm log cho các địa chỉ check lỗi — **Planned**  
+- v1.2 — Thêm throttle/limit gọi API (delay, retry) — **Planned**
 
+---
+
+## 🛠 Ví dụ lệnh chạy
+
+**PowerShell (chạy script trực tiếp):**
+```powershell
+# Mở PowerShell → chuyển đến thư mục chứa file → chạy:
+./check_addresses.ps1
+CMD (dùng .bat):
+
+cmd
+Copy code
+cd C:\path\to\folder
+run_check.bat
 📜 License
-
 MIT License © 2025
-Developed by the Community 🛠️
