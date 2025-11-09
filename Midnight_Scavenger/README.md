@@ -1,4 +1,4 @@
-# 🧰 Midnight Address Checker
+## 🧰 Midnight-Scavenger Address Checker
 
 Một công cụ nhỏ giúp kiểm tra danh sách địa chỉ ví thông qua API của **Midnight**.  
 Hỗ trợ nhập danh sách địa chỉ theo 2 cách — thủ công hoặc từ file `.csv`.
