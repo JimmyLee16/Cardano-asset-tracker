@@ -1,8 +1,12 @@
-#Requires -Version 5.1
-# -*- coding: utf-8 -*-
-chcp 65001 | Out-Null
-[Console]::OutputEncoding = [Text.Encoding]::UTF8
-$OutputEncoding = [Text.Encoding]::UTF8
+# PowerShell UTF-8 Auto Reload
+if (-not ([Console]::OutputEncoding.WebName -eq 'utf-8')) {
+    chcp 65001 > $null
+    [Console]::OutputEncoding = [Text.Encoding]::UTF8
+    $ps1 = $MyInvocation.MyCommand.Definition
+    powershell -ExecutionPolicy Bypass -NoProfile -File "$ps1"
+    exit
+}
+
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
