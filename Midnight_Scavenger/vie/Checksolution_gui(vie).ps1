@@ -1,18 +1,29 @@
+#Requires -Version 5.1
+# -*- coding: utf-8 -*-
+
 $path = $MyInvocation.MyCommand.Definition
 $bytes = [System.IO.File]::ReadAllBytes($path)
 
-# Kiểm tra BOM
+# Kiểm tra và thêm BOM nếu thiếu
 if ($bytes.Length -lt 3 -or $bytes[0] -ne 0xEF -or $bytes[1] -ne 0xBB -or $bytes[2] -ne 0xBF) {
-    Write-Host "🔄 Converting script to UTF-8 with BOM..." -ForegroundColor Cyan
+    Write-Host "⚙️  Đang thêm BOM để đảm bảo UTF-8 chuẩn hiển thị tiếng Việt..." -ForegroundColor Yellow
     $content = Get-Content $path -Raw
-    $utf8bom = New-Object System.Text.UTF8Encoding($true) # true = emit BOM
+    $utf8bom = New-Object System.Text.UTF8Encoding($true)
     [System.IO.File]::WriteAllText($path, $content, $utf8bom)
-    Write-Host "✅ Saved with BOM. Restarting script..." -ForegroundColor Green
-    
-    # Tự khởi chạy lại chính nó bằng PowerShell
-    Start-Process -FilePath "powershell" -ArgumentList "-ExecutionPolicy Bypass -NoProfile -File `"$path`""
-    return
+
+    Write-Host "✅ Đã thêm BOM. Script sẽ tự khởi động lại." -ForegroundColor Green
+
+    # Tự khởi chạy lại bằng Windows PowerShell (5.1)
+    Start-Process -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -NoProfile -File `"$path`""
+    exit
 }
+
+# Đặt lại encoding cho console & output
+chcp 65001 | Out-Null
+[Console]::InputEncoding = [Text.Encoding]::UTF8
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+$OutputEncoding = [Text.Encoding]::UTF8
+
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
