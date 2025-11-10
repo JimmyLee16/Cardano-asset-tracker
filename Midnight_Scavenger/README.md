@@ -10,6 +10,7 @@ Hỗ trợ nhập danh sách địa chỉ theo 2 cách — thủ công hoặc t�
 
 1. Tải về **2 file** Checksolution_gui(vie).ps1 và checker.bat ( bạn có thể tự đặt tên khác nhưng lưu ý phải đổi tên file .ps1 lại trong file .bat ví dụ: `check_addresses.ps1` và `run_check.bat`).  
 2. Đặt cả 2 file vào **cùng một thư mục**.
+3. Mở file .ps1 bằng notepad => save as lại file ở định dạng => UTF-8 with BOM  (TÌm ô endcoding ở cạnh nút "Save")
 
 ---
 
