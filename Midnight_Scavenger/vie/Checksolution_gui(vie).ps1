@@ -1,3 +1,9 @@
+#Requires -Version 5.1
+# -*- coding: utf-8 -*-
+chcp 65001 | Out-Null
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+$OutputEncoding = [Text.Encoding]::UTF8
+
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
