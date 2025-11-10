@@ -1,28 +1,36 @@
-#Requires -Version 5.1
-# -*- coding: utf-8 -*-
+# Midnight Scavenger Checker (Auto UTF-8 BOM)
+
+# --- AUTO FIX UTF-8 ENCODING WITH BOM (for PowerShell 5.1 GUI) ---
 
 $path = $MyInvocation.MyCommand.Definition
 $bytes = [System.IO.File]::ReadAllBytes($path)
 
-# Kiểm tra và thêm BOM nếu thiếu
+# Kiểm tra 3 byte đầu có phải EF BB BF (BOM) không
 if ($bytes.Length -lt 3 -or $bytes[0] -ne 0xEF -or $bytes[1] -ne 0xBB -or $bytes[2] -ne 0xBF) {
-    Write-Host "⚙️  Đang thêm BOM để đảm bảo UTF-8 chuẩn hiển thị tiếng Việt..." -ForegroundColor Yellow
-    $content = Get-Content $path -Raw
+    Write-Host "⚙️  Đang tự chuyển file sang UTF-8 with BOM để hiển thị tiếng Việt đúng..." -ForegroundColor Yellow
+    
+    # Đọc toàn bộ nội dung hiện tại
+    $content = Get-Content -Raw -Path $path
+    
+    # Ghi lại bằng UTF8 with BOM
     $utf8bom = New-Object System.Text.UTF8Encoding($true)
     [System.IO.File]::WriteAllText($path, $content, $utf8bom)
 
-    Write-Host "✅ Đã thêm BOM. Script sẽ tự khởi động lại." -ForegroundColor Green
-
-    # Tự khởi chạy lại bằng Windows PowerShell (5.1)
+    Write-Host "✅ Đã chuyển sang UTF-8 with BOM, khởi động lại..." -ForegroundColor Green
+    # Tự khởi chạy lại chính nó
     Start-Process -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -NoProfile -File `"$path`""
     exit
 }
 
-# Đặt lại encoding cho console & output
+# --- Đặt encoding cho console để đảm bảo không lỗi font ---
 chcp 65001 | Out-Null
-[Console]::InputEncoding = [Text.Encoding]::UTF8
+[Console]::InputEncoding  = [Text.Encoding]::UTF8
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
-$OutputEncoding = [Text.Encoding]::UTF8
+$OutputEncoding           = [Text.Encoding]::UTF8
+
+# --- (phần code GUI của bạn tiếp tục ở đây) ---
+Write-Host "🚀 Khởi tạo giao diện Midnight Scavenger..." -ForegroundColor Cyan
+
 
 
 Add-Type -AssemblyName System.Windows.Forms
