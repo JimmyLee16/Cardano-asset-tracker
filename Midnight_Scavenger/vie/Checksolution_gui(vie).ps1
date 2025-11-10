@@ -1,12 +1,18 @@
-# PowerShell UTF-8 Auto Reload
-if (-not ([Console]::OutputEncoding.WebName -eq 'utf-8')) {
-    chcp 65001 > $null
-    [Console]::OutputEncoding = [Text.Encoding]::UTF8
-    $ps1 = $MyInvocation.MyCommand.Definition
-    powershell -ExecutionPolicy Bypass -NoProfile -File "$ps1"
-    exit
-}
+$path = $MyInvocation.MyCommand.Definition
+$bytes = [System.IO.File]::ReadAllBytes($path)
 
+# Kiểm tra BOM
+if ($bytes.Length -lt 3 -or $bytes[0] -ne 0xEF -or $bytes[1] -ne 0xBB -or $bytes[2] -ne 0xBF) {
+    Write-Host "🔄 Converting script to UTF-8 with BOM..." -ForegroundColor Cyan
+    $content = Get-Content $path -Raw
+    $utf8bom = New-Object System.Text.UTF8Encoding($true) # true = emit BOM
+    [System.IO.File]::WriteAllText($path, $content, $utf8bom)
+    Write-Host "✅ Saved with BOM. Restarting script..." -ForegroundColor Green
+    
+    # Tự khởi chạy lại chính nó bằng PowerShell
+    Start-Process -FilePath "powershell" -ArgumentList "-ExecutionPolicy Bypass -NoProfile -File `"$path`""
+    return
+}
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
