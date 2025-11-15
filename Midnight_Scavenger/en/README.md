@@ -66,12 +66,14 @@ Copy code
 # Open PowerShell → navigate to the folder → run:
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass 
 ./check_addresses.ps1
+
 CMD (using .bat file):
 
 cmd
 Copy code
 cd C:\path\to\folder
 run_check.bat
+
 ⚖️ Disclaimer
 This tool is provided free of charge and intended solely for educational and API testing purposes.
 
