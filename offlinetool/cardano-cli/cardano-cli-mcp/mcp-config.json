@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "cardano-cli": {
+      "command": "python",
+      "args": ["./cardano-cli-mcp/server.py"],
+      "env": {
+        "CARDANO_CLI_PATH": "./cardano-cli.exe",
+        "CARDANO_NETWORK": "mainnet",
+        "CARDANO_WORKSPACE": "./workspace"
+      }
+    }
+  }
+}
