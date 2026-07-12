@@ -12,7 +12,7 @@ cardano-cli-11.0.0.0-win64/
 │   ├── config.py                # Configuration (CLI path, network, workspace)
 │   ├── cardano_cli.py           # Subprocess wrapper utility
 │   └── requirements.txt         # Python dependencies
-├── .devin/workflows/            # Skills / Workflows
+├── workflows/            # Skills / Workflows
 │   ├── create-wallet.md         # Generate wallet from mnemonic
 │   ├── build-and-sign-tx.md     # Build, sign, submit transactions
 │   ├── register-staking.md      # Register stake + delegate to pool
