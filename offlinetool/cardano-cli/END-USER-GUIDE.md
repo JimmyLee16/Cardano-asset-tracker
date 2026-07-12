@@ -290,9 +290,7 @@ cardano-cli conway transaction submit --tx-file tx.signed
 
 ### 2. **Wallet Services**
 - Daedalus Wallet
-- Yoroi Wallet
-- Lace Wallet
-- Nami Wallet (browser extension)
+- Lace Wallet 
 
 ### 3. **REST APIs**
 - Blockfrost API
