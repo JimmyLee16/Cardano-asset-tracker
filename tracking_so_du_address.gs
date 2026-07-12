@@ -11,7 +11,7 @@ var telegramBotToken = "Bot token của bạn";
 var telegramChatId ="ID telegram group"; //add group với bot 
 function soduADA() {
   // Define the recipient email
-  var koiosUrl = "https://api.koios.rest/api/v1address_info";
+  var koiosUrl = "https://api.koios.rest/api/v1/address_info";
   var koiosHeaders = {
     "Accept": "application/json",
     "Content-Type": "application/json",
