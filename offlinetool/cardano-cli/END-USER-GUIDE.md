@@ -281,28 +281,23 @@ All `cardano-cli query` commands require a running node:
 
 Since you can't use `transaction submit` without a node, use these alternatives:
 
-### 1. **Block Explorers**
-- [CardanoScan](https://cardanoscan.io/)
-- [AdaLabs](https://adalabs.io/)
-- [Pool.pm](https://pool.pm/)
-
-### 2. **Public Node Services**
+### 1. **Public Node Services**
 Use a public node's socket:
 ```bash
 export CARDANO_NODE_SOCKET_PATH=/path/to/public/node/socket
 cardano-cli conway transaction submit --tx-file tx.signed
 ```
 
-### 3. **Wallet Services**
+### 2. **Wallet Services**
 - Daedalus Wallet
 - Yoroi Wallet
 - Lace Wallet
 - Nami Wallet (browser extension)
 
-### 4. **REST APIs**
+### 3. **REST APIs**
 - Blockfrost API
 - Koios API
-- Blockchair API
+- Omigos API
 
 ---
 
